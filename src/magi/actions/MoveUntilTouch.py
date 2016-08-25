@@ -1,0 +1,207 @@
+from .base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
+from openravepy import Robot, KinBody
+from prpy.util import CopyTrajectory
+import numpy
+
+import logging
+logger = logging.getLogger(__name__)
+
+class MoveUntilTouchExecutableSolution(ExecutableSolution):
+    def __init__(self, solution, traj):
+        """
+        @param solution The Solution object that generated this ExecutableSolution
+        @param traj The planned trajectory to be executed
+        """
+        super(MoveUntilTouchExecutableSolution, self).__init__(solution)
+        self.traj = traj
+
+    @property
+    def action(self):
+        return self.solution.action
+
+    def execute(self, env, simulate):
+        """
+        Execute the planned trajectory
+        @param env The OpenRAVE environment
+        @param simulate If True, execute in simulation
+        @return True if the trajectory was aborted due to touching an object
+        """
+        from prpy.exceptions import TrajectoryAborted
+
+        manipulator = self.action.get_manipulator(env)
+        robot = manipulator.GetRobot()
+        traj = CopyTrajectory(self.traj, env=env)
+        touched=False
+        try:
+            robot.ExecuteTrajectory(traj)
+        except TrajectoryAborted:
+            touched = True
+        
+        return touched
+
+
+class MoveUntilTouchSolution(Solution):
+    def __init__(self, action, path, deterministic):
+        """
+        @param action The Action that generated this Solution
+        @param path The path to execute
+        @param deterministic True if this Solution was generated
+        using a deterministic planner
+        """
+        super(MoveUntilTouchSolution, self).__init__(action, deterministic=deterministic)
+        self.path = path
+
+    def save(self, env):
+        """
+        @return A RobotStateSaver that saves robot configuration (LinkTransformation)
+        """
+        robot = self.action.get_manipulator(env).GetRobot()
+        return robot.CreateRobotStateSaver(
+            Robot.SaveParameters.LinkTransformation)
+
+    def postprocess(self, env):
+        """
+        WARNING: This action has been temporarily disabled
+        Postprocess the trajectory, adding required flags to indicate the trajectory
+        should be stopped when high forces/torques are encountered.
+        @param env The OpenRAVE environment
+        @return A MoveUntilTouchExecutableSolution
+        """
+        manipulator = self.action.get_manipulator(env)
+        robot = manipulator.GetRobot()
+
+        with env:
+            # Compute the expected force direction in the sensor frame.
+            hand_pose = manipulator.GetEndEffectorTransform()
+            relative_direction = numpy.dot(
+                hand_pose[0:3, 0:3], self.action.direction)
+
+            # Tell the controller to stop on force/torque input.
+            path = CopyTrajectory(self.path, env=env)
+            # manipulator.SetTrajectoryExecutionOptions(path,
+            #     stop_on_stall=True, stop_on_ft=True,
+            #     force_magnitude=self.action.force_magnitude,
+            #     force_direction=relative_direction,
+            #     torque=self.action.torque)
+
+            # Compute the trajectory timing. This is potentially slow.
+            traj = robot.PostProcessPath(path)
+
+        return MoveUntilTouchExecutableSolution(
+            solution=self,
+            traj=traj)
+
+    def jump(self, env):
+        """
+        Move the robot to the last configuration before a touch is expected to occur
+        @param env The OpenRAVE environment
+        """
+        manipulator = self.action.get_manipulator(env)
+        robot = manipulator.GetRobot()
+
+        with robot.CreateRobotStateSaver(Robot.SaveParameters.ActiveDOF):
+            robot.SetActiveDOFs(manipulator.GetArmIndices())
+            cspec= robot.GetActiveConfigurationSpecification()
+
+            # Jump to the end of the trajectory.
+            robot.SetActiveDOFValues(
+                self.path.GetWaypoint(self.path.GetNumWaypoints() - 1, cspec))
+
+
+class MoveUntilTouchAction(Action):
+    def __init__(self, manipulator, direction, min_distance, max_distance,
+                 target_bodies, force_magnitude=5., torque=None, planner=None, name=None):
+        """
+        @param manipulator The manipulator to move
+        @param direction The direction (3 dim vector - [x,y,z] in world coordinates)
+        @param min_distance The min distance to move
+        @param max_distance The max distance to move
+        @param target_bodies Any bodies that should be disabled during planning
+        @param force_magnitude The max allowable magnitude of force before considering the
+          manipulator to be touching something
+        @param torque the max allowable torque before considering the manipulator to be touching 
+          something
+        @param planner The planner to use to generate the trajectory, if None robot.planner is used
+        @param name The name of this action
+        """
+        super(MoveUntilTouchAction, self).__init__(name=name)
+
+        self._manipulator = to_key(manipulator)
+        self._target_bodies = [to_key(body) for body in target_bodies]
+
+        self.direction = numpy.array(direction, dtype='float')
+        self.min_distance = float(min_distance)
+        self.max_distance = float(max_distance)
+        self.force_magnitude = float(force_magnitude)
+        self.planner = planner
+
+        if torque is not None:
+            self.torque = numpy.array(torque, dtype='float')
+        else:
+            self.torque = numpy.array([127.] * 3)
+        
+    def get_manipulator(self, env):
+        return from_key(env, self._manipulator)
+
+    def get_bodies(self, env, bodies):
+        return [from_key(env, key) for key in bodies]
+
+    def plan(self, env):
+        """
+        Plan a trajectory that moves in the specified direction for
+        the specified distance unless an object is touched
+        @param env The OpenRAVE environment
+        """
+        from prpy.planning import PlanningError
+        from prpy.rave import AllDisabled
+        from prpy.viz import RenderVector
+
+        target_bodies = self.get_bodies(env, self._target_bodies)
+        manipulator = self.get_manipulator(env)
+        robot = manipulator.GetRobot()
+        env = robot.GetEnv()
+
+        start_point = manipulator.GetEndEffectorTransform()[0:3, 0]
+        ssavers = [ robot.CreateRobotStateSaver(
+                Robot.SaveParameters.ActiveDOF
+              | Robot.SaveParameters.ActiveManipulator
+              | Robot.SaveParameters.LinkTransformation) ]
+        for body in target_bodies:
+            # ensure we preserve any enable-disabling that wraps
+            # this function
+            ssavers += [ body.CreateKinBodyStateSaver(
+                KinBody.SaveParameters.LinkEnable) ]
+
+        from contextlib import nested
+        with nested(*ssavers),\
+             RenderVector(
+                start_point, self.direction, self.max_distance, env),\
+             AllDisabled(env, target_bodies):
+
+            manipulator.SetActive()
+            planner = self.planner if self.planner is not None else robot.planner
+
+            try:
+                path = planner.PlanToEndEffectorOffset(
+                    robot=robot,
+                    direction=self.direction,
+                    distance=self.min_distance,
+                    max_distance=self.max_distance)
+
+                # Mark this action as deterministic based on the traj tags
+                from prpy.util import GetTrajectoryTags
+                from prpy.planning.base import Tags
+                path_tags = GetTrajectoryTags(path)
+                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
+                if deterministic is None:
+                    logger.warn("Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
+                                "Assuming non-deterministic.")
+                    deterministic = False
+
+
+            except PlanningError as e:
+                raise ActionError(str(e), deterministic=e.deterministic)
+
+        from .util import get_feasible_path
+        path, _ = get_feasible_path(robot, path)
+        return MoveUntilTouchSolution(action=self, path=path, deterministic=deterministic)
