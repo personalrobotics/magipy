@@ -12,5 +12,5 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/ordata/"
 )
 
 if(CATKIN_ENABLE_TESTING)
-    # add tests
+  catkin_add_nosetests(tests/test_MoveHand.py)
 endif(CATKIN_ENABLE_TESTING)
