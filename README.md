@@ -41,31 +41,31 @@ rosrun magi grasp_glass_demo.py --viewer rviz
 
 ## Action Graph
 An action graph is one meta-action in which all necessary sequences and branches of actions are defined. Use a combination of `Action` and meta-actions to construct an action graph for the multistep task you intend to perform. For example, an action graph for moving an object can be written as a `SequenceAction` as the following:
-```
-    actions = [ 
-        # OpenHand
-        OpenHandAction(...),
-        
-        # Plan to somewhere near object
-        PlanToTSRAction(...), 
-        
-        # Move until the robot touches the object
-        DisableAction(
-          MoveUntilTouchAction(...)
-        ),
-        
-        # Grab object
-        DisableAction(
-          GrabObjectAction(...)
-        )
-        
-        # Move it to somewhere
-        DisableAction(
-          PlanAction(...)
-        )
-    ]
+```python
+actions = [ 
+    # OpenHand
+    OpenHandAction(...),
     
-    SequenceAction(actions, name="GrabObjectSequence")
+    # Plan to somewhere near object
+    PlanToTSRAction(...), 
+    
+    # Move until the robot touches the object
+    DisableAction(
+      MoveUntilTouchAction(...)
+    ),
+    
+    # Grab object
+    DisableAction(
+      GrabObjectAction(...)
+    )
+    
+    # Move it to somewhere
+    DisableAction(
+      PlanAction(...)
+    )
+]
+
+SequenceAction(actions, name="GrabObjectSequence")
 ```
 
 ## Searching through an Action Graph 
@@ -74,10 +74,10 @@ MAGI offers two backtracking strategies to search through an action graph.
 - `RestartPlanner` restarts from the root whenever an action node fails.
 
 If it succeeds, `Planner` returns a solution which can be executed.
-```
-    planner = RestartPlanner()
-    with env:
-        solution = planner.plan_action(env, action)
-    execute_pipeline(env, solution)
+```python
+planner = RestartPlanner()
+with env:
+    solution = planner.plan_action(env, action)
+execute_pipeline(env, solution)
 ```
 
