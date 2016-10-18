@@ -22,7 +22,7 @@ $ . devel/setup.bash
 
 To run an example script, try
 ```
-rosrun magi grasp_glass_demo.py
+rosrun magi grasp_glass_demo.py --viewer rviz
 ```
 
 ## Action
