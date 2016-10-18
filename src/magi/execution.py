@@ -159,9 +159,7 @@ class ExecutionEngine(object):
         if self.monitor is not None:
             self.monitor.set_executing_action(executable_solution.solution.action)
 
-        with Validate(env, executable_solution.precondition, 
-                      executable_solution.postcondition):
-            executable_solution.execute(env, self.simulated)
+        executable_solution.execute(env, self.simulated)
 
 
 def execute_serial(env, solution, simulate, monitor=None):
