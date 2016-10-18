@@ -43,26 +43,15 @@ rosrun magi grasp_glass_demo.py --viewer rviz
 An action graph is one meta-action in which all necessary sequences and branches of actions are defined. Use a combination of `Action` and meta-actions to construct an action graph for the multistep task you intend to perform. For example, an action graph for moving an object can be written as a `SequenceAction` as the following:
 ```python
 actions = [ 
-    # OpenHand
     OpenHandAction(...),
     
     # Plan to somewhere near object
     PlanToTSRAction(...), 
     
     # Move until the robot touches the object
-    DisableAction(
-      MoveUntilTouchAction(...)
-    ),
+    MoveUntilTouchAction(...)
     
-    # Grab object
-    DisableAction(
-      GrabObjectAction(...)
-    )
-    
-    # Move it to somewhere
-    DisableAction(
-      PlanAction(...)
-    )
+    GrabObjectAction(...)
 ]
 
 SequenceAction(actions, name="GrabObjectSequence")
