@@ -10,6 +10,7 @@ $ cd my-workspace/src
 $ touch .rosinstall
 $ wstool set magi --git https://github.com/personalrobotics/magi -y
 $ wstool merge https://raw.githubusercontent.com/personalrobotics/pr-rosinstalls/master/herb-minimal-sim.rosinstall
+$ wstool set pr-ordata --git https://github.com/personalrobotics/pr-ordata -y
 $ wstool update
 $ cd ..
 $ rosdep update
@@ -17,6 +18,11 @@ $ find src -name manifest.xml -delete
 $ rosdep install -y -r --ignore-src --rosdistro=indigo --from-paths src
 $ catkin build
 $ . devel/setup.bash
+```
+
+To run an example script, try
+```
+rosrun magi grasp_glass_demo.py
 ```
 
 ## Action
@@ -70,6 +76,8 @@ MAGI offers two backtracking strategies to search through an action graph.
 If it succeeds, `Planner` returns a solution which can be executed.
 ```
     planner = RestartPlanner()
-    solution = planner.plan_action(env, action)
+    with env:
+        solution = planner.plan_action(env, action)
     execute_pipeline(env, solution)
 ```
+
