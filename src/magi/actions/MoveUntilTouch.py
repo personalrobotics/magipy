@@ -182,22 +182,22 @@ class MoveUntilTouchAction(Action):
             planner = self.planner if self.planner is not None else robot.planner
 
             try:
-                path = planner.PlanToEndEffectorOffset(
-                    robot=robot,
-                    direction=self.direction,
-                    distance=self.min_distance,
-                    max_distance=self.max_distance)
+               # path = planner.PlanToEndEffectorOffset(
+               #     robot=robot,
+               #     direction=self.direction,
+               #     distance=self.min_distance,
+               #     max_distance=self.max_distance)
 
                 # Mark this action as deterministic based on the traj tags
-                from prpy.util import GetTrajectoryTags
-                from prpy.planning.base import Tags
-                path_tags = GetTrajectoryTags(path)
-                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
-                if deterministic is None:
-                    logger.warn("Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
-                                "Assuming non-deterministic.")
-                    deterministic = False
-
+               # from prpy.util import GetTrajectoryTags
+               # from prpy.planning.base import Tags
+               # path_tags = GetTrajectoryTags(path)
+               # deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
+               # if deterministic is None:
+               #     logger.warn("Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
+               #                 "Assuming non-deterministic.")
+               #     deterministic = False
+               path = manipulator.MoveUntilTouch(direction=self.direction, distance=self.min_distance, max_distance=self.max_distance, timelimit=5, execute=False)
 
             except PlanningError as e:
                 raise ActionError(str(e), deterministic=e.deterministic)

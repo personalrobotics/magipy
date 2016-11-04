@@ -272,3 +272,71 @@ class PlanEndEffectorStraight(PlanAction):
 
         return super(PlanEndEffectorStraight, self).plan(env)
     
+class PlanEndEffector(PlanAction):
+    def __init__(self, robot, active_indices, active_manipulator, distance, direction,
+                 args=None, kwargs=None, planner=None, name=None):
+        """
+        Runs a PlanToTSR method
+        @param robot The robot the tsr is defined on
+        @param active_indices The indices of the robot that should be active during planning
+        @param active_manipulator The manipulator of the robot that should be active during planning
+        @param distance The distance to move the end-effector
+        @param args Extra arguments to pass to the planner
+        @param kwargs Extra keyword arguments to pass to the planner
+        @param planner A specific planner to use - if None, robot.planner is used
+        """
+        super(PlanEndEffector, self).__init__(robot, active_indices, active_manipulator,
+                                                      method='PlanToEndEffectorOffset', args=args, kwargs=kwargs, 
+                                                      planner=planner, name=name)
+        
+        self.distance = distance
+        self.direction = direction
+
+    def plan(self, env):
+        """
+        Lookup the appropriate TSR in the tsrlibrary, then plan to that TSR
+        @return A PlanSolution object
+        @throws An ActionException if an error is encountered during planning
+        """
+        active_manipulator = self.get_manipulator(env)
+
+        self.kwargs['direction'] = self.direction
+        self.kwargs['distance'] = self.distance
+
+        return super(PlanEndEffector, self).plan(env)
+
+class FunnelBlockAction(PlanAction):
+    def __init__(self, robot, active_indices, active_manipulator, distance,
+                 args=None, kwargs=None, planner=None, name=None):
+        """
+        Runs a PlanToTSR method
+        @param robot The robot the tsr is defined on
+        @param active_indices The indices of the robot that should be active during planning
+        @param active_manipulator The manipulator of the robot that should be active during planning
+        @param distance The distance to move the end-effector
+        @param args Extra arguments to pass to the planner
+        @param kwargs Extra keyword arguments to pass to the planner
+        @param planner A specific planner to use - if None, robot.planner is used
+        """
+        super(FunnelBlockAction, self).__init__(robot, active_indices, active_manipulator,
+                                                      method='PlanToEndEffectorOffset', args=args, kwargs=kwargs, 
+                                                      planner=planner, name=name)
+        
+        self.distance = distance
+
+    def plan(self, env):
+        """
+        Lookup the appropriate TSR in the tsrlibrary, then plan to that TSR
+        @return A PlanSolution object
+        @throws An ActionException if an error is encountered during planning
+        """
+        active_manipulator = self.get_manipulator(env)
+
+        with env:
+            funnel_direction = -1. * active_manipulator.GetEndEffectorTransform()[:3,0]
+            funnel_direction[2] = 0.
+
+        self.kwargs['direction'] = funnel_direction
+        self.kwargs['distance'] = self.distance
+
+        return super(FunnelBlockAction, self).plan(env)
