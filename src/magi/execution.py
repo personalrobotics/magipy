@@ -2,7 +2,6 @@ from actions.Sequence import SequenceSolution, SequenceExecutableSolution
 from prpy.clone import Clone
 from Queue import Queue, Empty
 from threading import current_thread, Thread, Lock
-from actions.base import Validate 
 import logging
 import sys
 
