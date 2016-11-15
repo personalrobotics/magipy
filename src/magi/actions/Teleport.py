@@ -33,7 +33,7 @@ class TeleportSolution(Solution, ExecutableSolution):
         """
         return TeleportSolution(self.action, self.obj_transform)
 
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         """
         Teleport the object
         @param env The OpenRAVE environment

@@ -60,7 +60,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
         """
         return self
 
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         """
         Executes the motion of the hand
         @param env The OpenRAVE environment

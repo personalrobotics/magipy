@@ -22,13 +22,17 @@ class SequenceExecutableSolution(ExecutableSolution):
 
 
 class SequenceSolution(Solution):
-    def __init__(self, action, solutions, precondition=None, postcondition=None):
+    def __init__(self, action, solutions,
+                 precondition=None, postcondition=None):
         """
         @param action The Action that generated this solution
         @param solutions A list of solutions to be processed in order
         """
         deterministic = all(s.deterministic for s in solutions)
-        super(SequenceSolution, self).__init__(action, deterministic, precondition, postcondition)
+        super(SequenceSolution, self).__init__(action,
+                                               deterministic,
+                                               precondition,
+                                               postcondition)
         self.solutions = solutions
 
     def save_and_jump(self, env):
@@ -77,7 +81,8 @@ class SequenceSolution(Solution):
         
 
 class SequenceAction(Action):
-    def __init__(self, actions, name=None, precondition=None, postcondition=None):
+    def __init__(self, actions, name=None,
+                 precondition=None, postcondition=None):
         """
         @param actions A list of actions to be planned and executed in order
         @param name The name of this action
@@ -121,11 +126,13 @@ class SequenceAction(Action):
             next_solutions = self._plan_recursive(env, actions[1:])
         return [solution] + next_solutions
 
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         """
         Plan, postprocess and execute each action, one at a time, in order.
         @param env The OpenRAVE environment
         @param simulate If True, simulate execution
+        @param validate If True, validate execution
+        @param detector Use this detector during validation
         """
         results = []
 
@@ -134,6 +141,10 @@ class SequenceAction(Action):
                 solution = action.plan(env)
                 executable_solution = solution.postprocess(env)
 
-            results.append(executable_solution.execute(env, simulate))
-        return results
+            results.append(executable_solution.execute(env,
+                                                       simulate,
+                                                       validate,
+                                                       detector))
+
+            return results
 

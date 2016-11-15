@@ -15,13 +15,13 @@ class DisableExecutableSolution(ExecutableSolution):
         self.solution = solution
         self.wrapped_solution = wrapped_solution
 
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         """
         Disable all required objects, then call execute on the wrapped ExecutableSolution
         """
         objects = self.solution.action.get_objects(env)
         with AllDisabled(env, objects, padding_only=self.solution.action.padding_only):
-            return self.wrapped_solution.execute(env, simulate)
+            return self.wrapped_solution.execute(env, simulate, validate, detector)
 
 class DisableSolution(Solution, ExecutableSolution):
     def __init__(self, action, wrapped_solution):
@@ -64,7 +64,24 @@ class DisableSolution(Solution, ExecutableSolution):
         with AllDisabled(env, objects, padding_only=self.action.padding_only):
             executable_solution =  self.wrapped_solution.postprocess(env)
         return DisableExecutableSolution(solution=self, wrapped_solution=executable_solution)
-            
+
+    @property
+    def precondition(self):
+        return self.wrapped_solution.precondition
+
+    @property
+    def postcondition(self):
+        return self.wrapped_solution.postcondition
+
+    @precondition.setter
+    def precondition(self, value):
+        pass
+
+    @postcondition.setter
+    def postcondition(self, value):
+        pass
+
+
 class DisableAction(Action):
 
     def __init__(self, objects, wrapped_action, padding_only=False, name=None, checkpoint=False):
@@ -108,3 +125,20 @@ class DisableAction(Action):
             solution =  self.action.plan(env)
 
         return DisableSolution(action=self, wrapped_solution=solution)
+
+    @property
+    def precondition(self):
+        return self.action.precondition
+
+    @property
+    def postcondition(self):
+        return self.action.postcondition
+
+    @precondition.setter
+    def precondition(self, value):
+        pass
+
+    @postcondition.setter
+    def postcondition(self, value):
+        pass
+

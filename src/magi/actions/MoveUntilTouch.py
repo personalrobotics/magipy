@@ -19,7 +19,7 @@ class MoveUntilTouchExecutableSolution(ExecutableSolution):
     def action(self):
         return self.solution.action
 
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         """
         Execute the planned trajectory
         @param env The OpenRAVE environment

@@ -58,8 +58,10 @@ class ActionError(Exception):
         assert self.KNOWN_KWARGS.issuperset(kwargs.keys())
         self.deterministic = kwargs.get('deterministic', None)
 
+
 class CheckpointError(ActionError):
     pass
+
 
 class ExecutionError(Exception):
 
@@ -67,10 +69,17 @@ class ExecutionError(Exception):
         super(ExecutionError, self).__init__(message)
         self.failed_solution = solution
 
-class ValidationError(Exception): 
-    def __init__(self, message='', validator=None):
+
+class ValidationError(Exception):
+    def __init__(self, message='', validator=None, validating=None):
+        """
+        @param validator Validator that raised this error
+        @param validating Action or solution that failed validation
+        """
         super(ValidationError, self).__init__(message)
         self.failed_validator = validator
+        self.failed_validating = validating
+
 
 class Action(object):
     __metaclass__ = ABCMeta
@@ -116,7 +125,7 @@ class Action(object):
         """
         pass
 
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         """
         Plan, postprocess, and execute this action.
 
@@ -133,7 +142,7 @@ class Action(object):
             solution = self.plan(env)
             executable_solution = solution.postprocess(env)
 
-        return executable_solution.execute(env, simulate)
+        return executable_solution.execute(env, simulate, validate, detector)
 
 
 class Solution(object):
@@ -220,7 +229,7 @@ class Solution(object):
         """
         pass
 
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         """
         Postprocess and execute this solution.
 
@@ -236,7 +245,8 @@ class Solution(object):
         with env:
             executable_solution = self.postprocess(env)
 
-        return executable_solution.execute(env, simulate)
+        return executable_solution.execute(env, simulate,
+                                           validate, detector)
 
 
 class ExecutableSolution(object):
@@ -248,7 +258,7 @@ class ExecutableSolution(object):
         self.postcondition = solution.postcondition
 
     @abstractmethod
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         """
         Execute this solution.
 
@@ -258,6 +268,8 @@ class ExecutableSolution(object):
 
         @param env: OpenRAVE environment
         @param simulated: flag to run in simulation
+        @param validate: run with validation
+        @param detector: validate with this detector
         @return result of executing the solution
         """
         pass

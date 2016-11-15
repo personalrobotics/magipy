@@ -14,11 +14,8 @@ class NullSolution(Solution, ExecutableSolution):
     """
     A Solution and ExecutableSolution class that do nothing - simply a place holder
     """
-    def __init__(self, action, precondition=None, postcondition=None):
-        Solution.__init__(self, action, 
-                          deterministic=True,
-                          precondition=precondition, 
-                          postcondition=postcondition)
+    def __init__(self, action):
+        Solution.__init__(self, action, deterministic=True)
         ExecutableSolution.__init__(self, self)
     
     def save(self, env):
@@ -30,7 +27,7 @@ class NullSolution(Solution, ExecutableSolution):
     def postprocess(self, env):
         return self
         
-    def execute(self, env, simulate):
+    def execute(self, env, simulate, validate=False, detector=None):
         pass
 
 class NullAction(Action):
