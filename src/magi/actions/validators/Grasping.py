@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from ..validate import Validator
+from ..Validator import Validator
 from ..base import to_key, from_key, ValidationError
 
 import logging
