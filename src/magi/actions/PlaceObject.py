@@ -50,12 +50,10 @@ class PlaceObjectAction(PlanAction):
         obj_radius = max(obj_extents[0], obj_extents[1])
 
         on_obj_tsr = robot.tsrlibrary(on_obj, 'point_on', padding=obj_radius, 
-                                      manip=active_manipulator)#,
-                                      #allowed_tilt=self.allowed_tilt,
-                                      #vertical_offset=self.height)
+                                      manip=active_manipulator)
         
         # Now use this to get a tsr for end-effector poses
-        place_tsr = robot.tsrlibrary(obj, 'place_on', pose_tsr_chain=on_obj_tsr[0],
+        place_tsr = robot.tsrlibrary(obj, 'place', pose_tsr_chain=on_obj_tsr[0],
                                      manip=active_manipulator)
 
         self.args = [place_tsr] + self.orig_args
