@@ -25,4 +25,6 @@
   <run_depend>python-yaml</run_depend>
   <run_depend>python</run_depend>
   <run_depend>python-scikit-learn</run_depend>
+
+  <doc_depend>doxypy</doc_depend>
 </package>
