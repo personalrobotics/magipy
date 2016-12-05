@@ -6,22 +6,22 @@ To install and run MAGI you should folow the [development environment guide](htt
 
 In summary, you should be able to execute these commands to download and build the code:
 
-	$ cd my-workspace/src
-	$ touch .rosinstall
-	$ wstool set magi --git https://github.com/personalrobotics/magi -y
-	$ wstool merge https://raw.githubusercontent.com/personalrobotics/pr-rosinstalls/master/herb-minimal-sim.rosinstall
-	$ wstool set pr-ordata --git https://github.com/personalrobotics/pr-ordata -y
-	$ wstool update
-	$ cd ..
-	$ rosdep update
-	$ find src -name manifest.xml -delete
-	$ rosdep install -y -r --ignore-src --rosdistro=indigo --from-paths src
-	$ catkin build
-	$ . devel/setup.bash
+    $ cd my-workspace/src
+    $ touch .rosinstall
+    $ wstool set magi --git https://github.com/personalrobotics/magi -y
+    $ wstool merge https://raw.githubusercontent.com/personalrobotics/pr-rosinstalls/master/herb-minimal-sim.rosinstall
+    $ wstool set pr-ordata --git https://github.com/personalrobotics/pr-ordata -y
+    $ wstool update
+    $ cd ..
+    $ rosdep update
+    $ find src -name manifest.xml -delete
+    $ rosdep install -y -r --ignore-src --rosdistro=indigo --from-paths src
+    $ catkin build
+    $ . devel/setup.bash
 
 To run an example script, try
 
-	$ rosrun magi grasp_glass_demo.py --viewer rviz
+    $ rosrun magi grasp_glass_demo.py --viewer rviz
 
 ## Action
 `Action` defines what needs to be planned. Each `Action` has `plan` method through which `MAGI` generates a `Solution`, which contains geometrically feasible path that can be `postprocess`ed to be executed on the robot. `MAGI` offers many actions, including the following:
@@ -39,19 +39,19 @@ To run an example script, try
 ## Action Graph
 An action graph is one meta-action in which all necessary sequences and branches of actions are defined. Use a combination of `Action` and meta-actions to construct an action graph for the multistep task you intend to perform. For example, an action graph for moving an object can be written as a `SequenceAction` as the following:
 
-	actions = [
-		OpenHandAction(...),
+    actions = [
+        OpenHandAction(...),
 
-		# Plan to somewhere near object
-		PlanToTSRAction(...),
+        # Plan to somewhere near object
+        PlanToTSRAction(...),
 
-		# Move until the robot touches the object
-		MoveUntilTouchAction(...)
+        # Move until the robot touches the object
+        MoveUntilTouchAction(...)
 
-		GrabObjectAction(...)
-	]
+        GrabObjectAction(...)
+    ]
 
-	SequenceAction(actions, name="GrabObjectSequence")
+    SequenceAction(actions, name="GrabObjectSequence")
 
 ## Searching through an Action Graph
 MAGI offers two backtracking strategies to search through an action graph.
@@ -60,7 +60,7 @@ MAGI offers two backtracking strategies to search through an action graph.
 
 If it succeeds, `Planner` returns a solution which can be executed.
 
-	planner = RestartPlanner()
-	with env:
-		solution = planner.plan_action(env, action)
-	execute_pipeline(env, solution)
+    planner = RestartPlanner()
+    with env:
+        solution = planner.plan_action(env, action)
+    execute_pipeline(env, solution)
