@@ -1,9 +1,9 @@
+from actions.Sequence import SequenceSolution, SequenceExecutableSolution
+from prpy.clone import Clone
+from Queue import Queue, Empty
+from threading import current_thread, Thread, Lock
 import logging
 import sys
-from Queue import Queue
-from threading import current_thread, Thread, Lock
-from magi.actions.Sequence import SequenceSolution, SequenceExecutableSolution
-from prpy.clone import Clone
 
 LOGGER = logging.getLogger('execute_pipeline')
 
