@@ -1,11 +1,11 @@
-from actions.Sequence import SequenceSolution, SequenceExecutableSolution
-from prpy.clone import Clone
-from Queue import Queue, Empty
-from threading import current_thread, Thread, Lock
 import logging
 import sys
+from Queue import Queue
+from threading import current_thread, Thread, Lock
+from magi.actions.Sequence import SequenceSolution, SequenceExecutableSolution
+from prpy.clone import Clone
 
-logger = logging.getLogger('execute_pipeline')
+LOGGER = logging.getLogger('execute_pipeline')
 
 
 class AtomicValue(object):
@@ -65,8 +65,8 @@ def worker_thread(env, is_running, lock, input_queue, output_queue, work_fn,
                 # Check if an error occurred in planning. This is indicated by
                 # wrapping the underlying exception in an ExceptionWrapper.
                 if isinstance(input_value_raw, ExceptionWrapper):
-                    e = input_value_raw.exception
-                    logger.info('Stopping %s by request: %s', name, e)
+                    exc_input = input_value_raw.exception
+                    LOGGER.info('Stopping %s by request: %s', name, exc_input)
                     break
 
                 # Split the input_value into multiple work items.
@@ -81,17 +81,17 @@ def worker_thread(env, is_running, lock, input_queue, output_queue, work_fn,
                 if output_queue is not None:
                     output_queue.put(output_value)
             except:
-                logger.error(
+                LOGGER.error(
                     'Encountered error in %s thread.', name, exc_info=True)
 
                 if output_queue is not None:
-                    _, e, _ = sys.exc_info()
-                    output_queue.put(ExceptionWrapper(e))
+                    _, exc_input, _ = sys.exc_info()
+                    output_queue.put(ExceptionWrapper(exc_input))
 
                 break
     finally:
         is_running.set_value(False)
-        logger.info('Exiting %s thread.', name)
+        LOGGER.info('Exiting %s thread.', name)
 
         if lock:
             env.Unlock()
@@ -131,7 +131,7 @@ class ExecutionEngine(object):
                   executable_solution_queue, None, self._execute_callback,
                   flatten_executable_solution))
 
-        logger.info('Starting post-processing and execution threads.')
+        LOGGER.info('Starting post-processing and execution threads.')
         postprocessing_thread.start()
         execution_thread.start()
 
@@ -141,17 +141,17 @@ class ExecutionEngine(object):
                 return plan_callback(planning_env, solution_queue)
         except:
             # Forcefully terminate the background threads as soon as possible.
-            logger.error('Encountered error while planning.', exc_info=True)
+            LOGGER.error('Encountered error while planning.', exc_info=True)
             is_postprocessing_running.set_value(False)
             is_execution_running.set_value(False)
         finally:
             # Wait for post-processing to finish.
-            logger.info('Waiting for post-processing to finish.')
+            LOGGER.info('Waiting for post-processing to finish.')
             solution_queue.put(ExceptionWrapper(TerminationRequest()))
             postprocessing_thread.join()
 
             # Wait for execution to finish.
-            logger.info('Waiting for execution to finish.')
+            LOGGER.info('Waiting for execution to finish.')
             executable_solution_queue.put(
                 ExceptionWrapper(TerminationRequest()))
             execution_thread.join()
@@ -172,11 +172,11 @@ class ExecutionEngine(object):
         executable_solution.execute(env, self.simulated)
 
 
-def execute_serial(env, solution, simulate, monitor=None):
+def execute_serial(env, solution, simulate):
     solution.postprocess(env).execute(env, simulate)
 
 
-def execute_interleaved(env, full_solution, simulate, monitor=None):
+def execute_interleaved(env, full_solution, simulate):
     for solution in flatten_solution(full_solution):
         solution.postprocess(env).execute(env, simulate)
 
