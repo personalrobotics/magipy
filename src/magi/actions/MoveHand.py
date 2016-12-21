@@ -2,18 +2,26 @@ from .base import Action, ExecutableSolution, Solution, from_key, to_key
 from openravepy import Robot, KinBody
 import numpy
 
+
 class MoveHandSolution(Solution, ExecutableSolution):
-    def __init__(self, action, dof_values, dof_indices, precondition=None, postcondition=None):
+    def __init__(self,
+                 action,
+                 dof_values,
+                 dof_indices,
+                 precondition=None,
+                 postcondition=None):
         """
         @param action The Action that created this Solution
         @param dof_values A list of dof values to move the hand to
         @param dof_indices A list of the indices of the dofs to move - 
         list ordering should correspond to dof_values
         """
-        Solution.__init__(self, action, 
-                          deterministic=True,
-                          precondition=precondition, 
-                          postcondition=postcondition)
+        Solution.__init__(
+            self,
+            action,
+            deterministic=True,
+            precondition=precondition,
+            postcondition=postcondition)
         ExecutableSolution.__init__(self, self)
 
         self.dof_values = numpy.array(dof_values, dtype='float')
@@ -41,11 +49,10 @@ class MoveHandSolution(Solution, ExecutableSolution):
         hand = self.action.get_hand(env)
         robot = hand.GetParent()
 
-
         with robot.CreateRobotStateSaver(Robot.SaveParameters.ActiveDOF):
             if self.traj is None:
-                self.traj = self._get_trajectory(
-                    robot, self.dof_values, self.dof_indices)
+                self.traj = self._get_trajectory(robot, self.dof_values,
+                                                 self.dof_indices)
             robot.SetActiveDOFs(self.dof_indices)
             cspec = robot.GetActiveConfigurationSpecification()
 
@@ -72,10 +79,11 @@ class MoveHandSolution(Solution, ExecutableSolution):
         if simulate:
             if self.traj is None:
                 with env:
-                    self.traj = self._get_trajectory(
-                        robot, self.dof_values, self.dof_indices)
+                    self.traj = self._get_trajectory(robot, self.dof_values,
+                                                     self.dof_indices)
             # Simply move hand to the last dof_values on the trajectory.
-            waypoint = self.traj.GetWaypoint(self.traj.GetNumWaypoints() - 1).tolist()
+            waypoint = self.traj.GetWaypoint(self.traj.GetNumWaypoints() -
+                                             1).tolist()
             hand = self.action.get_hand(env)
             indices = hand.GetIndices()
             dof_values = []
@@ -85,12 +93,12 @@ class MoveHandSolution(Solution, ExecutableSolution):
                     dof_values += [waypoint[dof_indices.index(i)]]
                 except ValueError as ignored:
                     dof_values += [None]
-                    
+
             hand.MoveHand(*dof_values, timeout=None)
-        
+
         else:
             hand.MoveHand(*self.dof_values, timeout=None)
-        
+
     def _get_trajectory(self, robot, q_goal, dof_indices):
         """
         Generates a hand trajectory that attempts to move the specified dof_indices
@@ -106,8 +114,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
             CollisionOptions,
             CollisionOptionsStateSaver,
             CollisionReport,
-            RaveCreateTrajectory,
-        )
+            RaveCreateTrajectory, )
 
         def collision_callback(report, is_physics):
             colliding_links.update([report.plink1, report.plink2])
@@ -148,8 +155,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
             events = numpy.concatenate((
                 [0.],
                 durations,
-                numpy.arange(0., durations.max(), 0.01),
-            ))
+                numpy.arange(0., durations.max(), 0.01), ))
             mask = numpy.array([True] * len(q_goal), dtype='bool')
 
             for t_curr in numpy.unique(events):
@@ -172,9 +178,11 @@ class MoveHandSolution(Solution, ExecutableSolution):
 
                 # Check which DOF(s) are involved in the collision.
                 mask = numpy.logical_and(mask, [
-                    not any(robot.DoesAffect(dof_index, link.GetIndex()) 
-                            for link in colliding_links)
-                    for dof_index in dof_indices])
+                    not any(
+                        robot.DoesAffect(dof_index, link.GetIndex())
+                        for link in colliding_links)
+                    for dof_index in dof_indices
+                ])
 
                 # Revert the DOFs that are in collision.
                 # TODO: This doesn't seem to take the links out of collision.
@@ -184,7 +192,8 @@ class MoveHandSolution(Solution, ExecutableSolution):
                 # Add a waypoint to the output trajectory.
                 waypoint = numpy.empty(cspec.GetDOF())
                 cspec.InsertDeltaTime(waypoint, t_curr - t_prev)
-                cspec.InsertJointValues(waypoint, q_curr, robot, dof_indices, 0)
+                cspec.InsertJointValues(waypoint, q_curr, robot, dof_indices,
+                                        0)
                 traj.Insert(traj.GetNumWaypoints(), waypoint)
 
                 t_prev = t_curr
@@ -199,8 +208,13 @@ class MoveHandSolution(Solution, ExecutableSolution):
 
 
 class MoveHandAction(Action):
-    def __init__(self, hand, dof_values, dof_indices, name=None, 
-                 precondition=None, postcondition=None):
+    def __init__(self,
+                 hand,
+                 dof_values,
+                 dof_indices,
+                 name=None,
+                 precondition=None,
+                 postcondition=None):
         """
         Move hand to a desired configuration
         @param hand The hand to move
@@ -208,9 +222,8 @@ class MoveHandAction(Action):
         @param dof_indices The indices of the dofs specified in dof_values
         @param name The name of the action
         """
-        super(MoveHandAction, self).__init__(name=name, 
-                                             precondition=precondition, 
-                                             postcondition=postcondition)
+        super(MoveHandAction, self).__init__(
+            name=name, precondition=precondition, postcondition=postcondition)
 
         self._hand = to_key(hand)
         self.dof_values = numpy.array(dof_values, dtype='float')
@@ -243,7 +256,7 @@ def CloseHandAction(hand, name=None):
     to CloseHandAction
     """
     if name is None:
-        name='CloseHandAction'
+        name = 'CloseHandAction'
 
     return MoveHandAction(
         name=name,
@@ -260,7 +273,7 @@ def OpenHandAction(hand, name=None):
     OpenHandAction
     """
     if name is None:
-        name='OpenHandAction'
+        name = 'OpenHandAction'
 
     return MoveHandAction(
         name=name,
@@ -268,18 +281,23 @@ def OpenHandAction(hand, name=None):
         dof_indices=hand.GetIndices()[0:3],
         dof_values=[0., 0., 0.])
 
+
 class GrabObjectSolution(MoveHandSolution):
-    
-    def __init__(self, action, obj, dof_values, dof_indices, 
-                 precondition=None, postcondition=None):
+    def __init__(self,
+                 action,
+                 obj,
+                 dof_values,
+                 dof_indices,
+                 precondition=None,
+                 postcondition=None):
         """
         @param action The Action that generated this solution
         @param obj The object to grab
         @param dof_values The configuration to move the hand to before performing the grab
         @param dof_indices The DOF indices that correspond to the values in dof_values
         """
-        super(GrabObjectSolution, self).__init__(action, dof_values, dof_indices, 
-                                                 precondition, postcondition)
+        super(GrabObjectSolution, self).__init__(
+            action, dof_values, dof_indices, precondition, postcondition)
         self._obj = to_key(obj)
 
     def get_obj(self, env):
@@ -296,8 +314,9 @@ class GrabObjectSolution(MoveHandSolution):
         robot = self.action.get_hand(env).GetParent()
 
         from contextlib import nested
-        return nested( super(GrabObjectSolution, self).save(env),
-                       robot.CreateRobotStateSaver( Robot.SaveParameters.GrabbedBodies) )
+        return nested(
+            super(GrabObjectSolution, self).save(env),
+            robot.CreateRobotStateSaver(Robot.SaveParameters.GrabbedBodies))
 
     def jump(self, env):
         """
@@ -310,12 +329,11 @@ class GrabObjectSolution(MoveHandSolution):
         obj = self.get_obj(env)
         manipulator = self.action.get_manipulator(env)
 
-
         super(GrabObjectSolution, self).jump(env)
 
         # Now grab the object
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveManipulator ):
+                Robot.SaveParameters.ActiveManipulator):
             robot.SetActiveManipulator(manipulator)
             if obj in robot.GetGrabbed():
                 robot.Release(obj)
@@ -336,17 +354,24 @@ class GrabObjectSolution(MoveHandSolution):
         manipulator = self.action.get_manipulator(env)
         robot = manipulator.GetRobot()
 
-        with robot.CreateRobotStateSaver(Robot.SaveParameters.ActiveManipulator):
+        with robot.CreateRobotStateSaver(
+                Robot.SaveParameters.ActiveManipulator):
             # Manipulator must be active for grab to work
             robot.SetActiveManipulator(manipulator)
             if obj in robot.GetGrabbed():
                 robot.Release(obj)
             robot.Grab(obj)
-        
+
+
 class GrabObjectAction(MoveHandAction):
-    
-    def __init__(self, hand, obj, dof_values=None, 
-                 dof_indices=None, name=None, precondition=None, postcondition=None):
+    def __init__(self,
+                 hand,
+                 obj,
+                 dof_values=None,
+                 dof_indices=None,
+                 name=None,
+                 precondition=None,
+                 postcondition=None):
         """
         Close the hand and grab an object. 
         @param hand The hand to grab the object
@@ -357,19 +382,20 @@ class GrabObjectAction(MoveHandAction):
          in dof_values, if None defaults to only finger dofs
         """
         if dof_values is None:
-            dof_values=[2.4, 2.4, 2.4]
+            dof_values = [2.4, 2.4, 2.4]
         if dof_indices is None:
-            dof_indices=hand.GetIndices()[0:3]
+            dof_indices = hand.GetIndices()[0:3]
 
-        super(GrabObjectAction, self).__init__(hand, 
-                                                  dof_values=dof_values,
-                                                  dof_indices=dof_indices,
-                                                  name=name,
-                                                  precondition=precondition,
-                                                  postcondition=postcondition)
+        super(GrabObjectAction, self).__init__(
+            hand,
+            dof_values=dof_values,
+            dof_indices=dof_indices,
+            name=name,
+            precondition=precondition,
+            postcondition=postcondition)
         self._manipulator = to_key(hand.manipulator)
         self._obj = to_key(obj)
-        
+
     def get_manipulator(self, env):
         """
         Lookup the manipulator in the environment and return it
@@ -383,20 +409,20 @@ class GrabObjectAction(MoveHandAction):
         """
 
         # Add precondition posevalidator 
-        from validators.PoseValidator import ObjectPoseValidator 
+        from validators.PoseValidator import ObjectPoseValidator
         obj = from_key(env, self._obj)
-        obj_pose_validator = ObjectPoseValidator(obj.GetName(), obj.GetTransform())
+        obj_pose_validator = ObjectPoseValidator(obj.GetName(),
+                                                 obj.GetTransform())
 
         return GrabObjectSolution(
             action=self,
             obj=from_key(env, self._obj),
             dof_values=self.dof_values,
             dof_indices=self.dof_indices,
-            precondition = obj_pose_validator
-        )
+            precondition=obj_pose_validator)
+
 
 class ReleaseObjectsSolution(MoveHandSolution):
-    
     def __init__(self, action, objs, dof_values, dof_indices):
         """
         @param action The action that created the solution
@@ -404,23 +430,24 @@ class ReleaseObjectsSolution(MoveHandSolution):
         @param dof_values The configuration the hand should be moved to before releasing objects
         @param dof_indices The indices of the DOFs specified in dof_valuesx
         """
-        super(ReleaseObjectsSolution, self).__init__(action, dof_values, dof_indices)
+        super(ReleaseObjectsSolution, self).__init__(action, dof_values,
+                                                     dof_indices)
         self._objs = [to_key(o) for o in objs]
 
     def get_obj(self, env, obj_key):
         return from_key(env, obj_key)
-        
+
     def save(self, env):
         """
         Saves robot pose, object pose and grabbed bodies
         @param env The OpenRAVE environment
         """
         robot = self.action.get_hand(env).GetParent()
-        
-        from contextlib import nested            
-        return nested(super(ReleaseObjectsSolution, self).save(env),
-                      robot.CreateRobotStateSaver(
-                          Robot.SaveParameters.GrabbedBodies))
+
+        from contextlib import nested
+        return nested(
+            super(ReleaseObjectsSolution, self).save(env),
+            robot.CreateRobotStateSaver(Robot.SaveParameters.GrabbedBodies))
 
     def jump(self, env):
         """
@@ -456,9 +483,9 @@ class ReleaseObjectsSolution(MoveHandSolution):
         for obj_key in self._objs:
             obj = self.get_obj(env, obj_key)
             robot.Release(obj)
- 
-class ReleaseObjectAction(MoveHandAction):
 
+
+class ReleaseObjectAction(MoveHandAction):
     def __init__(self, hand, obj, dof_values, dof_indices, name=None):
         """
         Open the hand and release an object. 
@@ -468,10 +495,8 @@ class ReleaseObjectAction(MoveHandAction):
         @param dof_idnices The indices of the DOFs specified in dof_values
         @param name The name of the action
         """
-        super(ReleaseObjectAction, self).__init__(hand,
-                                                  dof_values=dof_values,
-                                                  dof_indices=dof_indices,
-                                                  name=name)
+        super(ReleaseObjectAction, self).__init__(
+            hand, dof_values=dof_values, dof_indices=dof_indices, name=name)
 
         self._obj = to_key(obj)
         self._manipulator = to_key(hand.manipulator)
@@ -481,13 +506,13 @@ class ReleaseObjectAction(MoveHandAction):
         Lookup the object in the environment and return it
         """
         return from_key(env, self._obj)
-    
+
     def get_manipulator(self, env):
         """
         Lookup the manipulator in the environment and return it
         """
         return from_key(env, self._manipulator)
-        
+
     def plan(self, env):
         """
         Does nothing. 
@@ -497,12 +522,10 @@ class ReleaseObjectAction(MoveHandAction):
             action=self,
             objs=[self.get_obj(env)],
             dof_values=self.dof_values,
-            dof_indices=self.dof_indices
-        )
+            dof_indices=self.dof_indices)
 
- 
+
 class ReleaseAllGrabbedAction(MoveHandAction):
-
     def __init__(self, hand, dof_values, dof_indices, name=None):
         """
         Open the hand and release all objects grabbed by the robot
@@ -511,11 +534,9 @@ class ReleaseAllGrabbedAction(MoveHandAction):
         @param dof_indices The indices of the DOFs specified in dof_values
         @param name The name of the action
         """
-        super(ReleaseAllGrabbedAction, self).__init__(hand,
-                                                  dof_values=dof_values,
-                                                  dof_indices=dof_indices,
-                                                  name=name)
-        
+        super(ReleaseAllGrabbedAction, self).__init__(
+            hand, dof_values=dof_values, dof_indices=dof_indices, name=name)
+
         self._manipulator = to_key(hand.manipulator)
 
     def get_obj(self, env, objname):
@@ -523,13 +544,13 @@ class ReleaseAllGrabbedAction(MoveHandAction):
         Lookup the object in the environment and return it
         """
         return from_key(env, self._obj)
-    
+
     def get_manipulator(self, env):
         """
         Lookup the manipulator in the environment and return it
         """
         return from_key(env, self._manipulator)
-        
+
     def plan(self, env):
         """
         Computes the list of bodies currently grabbed
@@ -539,10 +560,9 @@ class ReleaseAllGrabbedAction(MoveHandAction):
         manipulator = self.get_manipulator(env)
         robot = manipulator.GetRobot()
         grabbed_bodies = robot.GetGrabbed()
-        
+
         return ReleaseObjectsSolution(
             action=self,
             objs=grabbed_bodies,
             dof_values=self.dof_values,
-            dof_indices=self.dof_indices
-        )
+            dof_indices=self.dof_indices)

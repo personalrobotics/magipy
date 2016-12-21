@@ -2,6 +2,7 @@ from .base import Action, ExecutableSolution, Solution
 import logging
 logger = logging.getLogger(__name__)
 
+
 class SequenceExecutableSolution(ExecutableSolution):
     def __init__(self, solution, executable_solutions):
         """
@@ -17,18 +18,25 @@ class SequenceExecutableSolution(ExecutableSolution):
         @param env The OpenRAVE environment
         @param simulate If True, simulate execution
         """
-        return [executable_solution.execute(env, simulate)
-                for executable_solution in self.executable_solutions]
+        return [
+            executable_solution.execute(env, simulate)
+            for executable_solution in self.executable_solutions
+        ]
 
 
 class SequenceSolution(Solution):
-    def __init__(self, action, solutions, precondition=None, postcondition=None):
+    def __init__(self,
+                 action,
+                 solutions,
+                 precondition=None,
+                 postcondition=None):
         """
         @param action The Action that generated this solution
         @param solutions A list of solutions to be processed in order
         """
         deterministic = all(s.deterministic for s in solutions)
-        super(SequenceSolution, self).__init__(action, deterministic, precondition, postcondition)
+        super(SequenceSolution, self).__init__(action, deterministic,
+                                               precondition, postcondition)
         self.solutions = solutions
 
     def save_and_jump(self, env):
@@ -37,7 +45,8 @@ class SequenceSolution(Solution):
         @return A set of context managers, one for each solution, that must be applied in order
         """
         from contextlib import nested
-        return nested(*[solution.save_and_jump(env) for solution in self.solutions])
+        return nested(
+            *[solution.save_and_jump(env) for solution in self.solutions])
 
     def save(self, env):
         """
@@ -74,10 +83,14 @@ class SequenceSolution(Solution):
             next_solutions = self._postprocess_recursive(env, solutions[1:])
 
         return [executable_solution] + next_solutions
-        
+
 
 class SequenceAction(Action):
-    def __init__(self, actions, name=None, precondition=None, postcondition=None):
+    def __init__(self,
+                 actions,
+                 name=None,
+                 precondition=None,
+                 postcondition=None):
         """
         @param actions A list of actions to be planned and executed in order
         @param name The name of this action
@@ -89,16 +102,15 @@ class SequenceAction(Action):
         from validate import SequenceValidator
         if len(self.actions) > 0:
             if precondition:
-                self.precondition = SequenceValidator([precondition, 
-                                                       self.actions[0].precondition])
-            else: 
+                self.precondition = SequenceValidator(
+                    [precondition, self.actions[0].precondition])
+            else:
                 self.precondition = self.actions[0].precondition
             if postcondition:
-                self.postcondition = SequenceValidator([self.actions[-1].postcondition,
-                                                        postcondition])
+                self.postcondition = SequenceValidator(
+                    [self.actions[-1].postcondition, postcondition])
             else:
                 self.postcondition = self.actions[-1].postcondition
-
 
     def plan(self, env):
         """
@@ -136,4 +148,3 @@ class SequenceAction(Action):
 
             results.append(executable_solution.execute(env, simulate))
         return results
-

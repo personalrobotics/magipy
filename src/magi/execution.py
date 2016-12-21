@@ -7,6 +7,7 @@ import sys
 
 logger = logging.getLogger('execute_pipeline')
 
+
 class AtomicValue(object):
     def __init__(self, value):
         self.lock = Lock()
@@ -19,6 +20,7 @@ class AtomicValue(object):
     def get_value(self):
         with self.lock:
             return self.value
+
 
 class ExceptionWrapper(object):
     def __init__(self, exception):
@@ -38,12 +40,16 @@ def flatten_solution(solution):
 
 def flatten_executable_solution(executable_solution):
     if isinstance(executable_solution, SequenceExecutableSolution):
-        return sum([flatten_executable_solution(s)
-                    for s in executable_solution.executable_solutions], [])
+        return sum([
+            flatten_executable_solution(s)
+            for s in executable_solution.executable_solutions
+        ], [])
     else:
         return [executable_solution]
 
-def worker_thread(env, is_running, lock, input_queue, output_queue, work_fn, split_fn):
+
+def worker_thread(env, is_running, lock, input_queue, output_queue, work_fn,
+                  split_fn):
     name = current_thread().name
     internal_queue = []
 
@@ -75,8 +81,8 @@ def worker_thread(env, is_running, lock, input_queue, output_queue, work_fn, spl
                 if output_queue is not None:
                     output_queue.put(output_value)
             except:
-                logger.error('Encountered error in %s thread.', name,
-                    exc_info=True)
+                logger.error(
+                    'Encountered error in %s thread.', name, exc_info=True)
 
                 if output_queue is not None:
                     _, e, _ = sys.exc_info()
@@ -105,22 +111,25 @@ class ExecutionEngine(object):
                 execution_env=env,
                 plan_callback=plan_callback)
 
-    def _run_internal(self, planning_env, postprocessing_env, execution_env, plan_callback):
+    def _run_internal(self, planning_env, postprocessing_env, execution_env,
+                      plan_callback):
         is_postprocessing_running = AtomicValue(True)
         is_execution_running = AtomicValue(True)
         solution_queue = Queue()
         executable_solution_queue = Queue()
 
         postprocessing_thread = Thread(
-            name='post-processing', target=worker_thread,
+            name='post-processing',
+            target=worker_thread,
             args=(postprocessing_env, is_postprocessing_running, True,
-                solution_queue, executable_solution_queue,
-                self._postprocess_callback, flatten_solution))
+                  solution_queue, executable_solution_queue,
+                  self._postprocess_callback, flatten_solution))
         execution_thread = Thread(
-            name='execution', target=worker_thread,
+            name='execution',
+            target=worker_thread,
             args=(execution_env, is_execution_running, False,
-                executable_solution_queue, None,
-                self._execute_callback, flatten_executable_solution))
+                  executable_solution_queue, None, self._execute_callback,
+                  flatten_executable_solution))
 
         logger.info('Starting post-processing and execution threads.')
         postprocessing_thread.start()
@@ -143,7 +152,8 @@ class ExecutionEngine(object):
 
             # Wait for execution to finish.
             logger.info('Waiting for execution to finish.')
-            executable_solution_queue.put(ExceptionWrapper(TerminationRequest()))
+            executable_solution_queue.put(
+                ExceptionWrapper(TerminationRequest()))
             execution_thread.join()
 
     def _postprocess_callback(self, env, solution):
@@ -156,7 +166,8 @@ class ExecutionEngine(object):
 
     def _execute_callback(self, env, executable_solution):
         if self.monitor is not None:
-            self.monitor.set_executing_action(executable_solution.solution.action)
+            self.monitor.set_executing_action(
+                executable_solution.solution.action)
 
         executable_solution.execute(env, self.simulated)
 
@@ -178,15 +189,22 @@ def execute_pipeline(env, solution, simulate, monitor=None):
     engine.run(env, plan_callback)
 
 
-def plan_execute_pipeline(env, planner, action, simulate, monitor=None, timelimit=None):
+def plan_execute_pipeline(env,
+                          planner,
+                          action,
+                          simulate,
+                          monitor=None,
+                          timelimit=None):
     if timelimit is not None:
+
         def plan_callback(planning_env, solution_queue):
-            return planner.plan_timed(planning_env, action, timelimit,
-                    output_queue=solution_queue)
+            return planner.plan_timed(
+                planning_env, action, timelimit, output_queue=solution_queue)
     else:
+
         def plan_callback(planning_env, solution_queue):
-            return planner.plan_action(planning_env, action,
-                    output_queue=solution_queue)
+            return planner.plan_action(
+                planning_env, action, output_queue=solution_queue)
 
     engine = ExecutionEngine(simulated=simulate, monitor=monitor)
     engine.run(env, plan_callback)

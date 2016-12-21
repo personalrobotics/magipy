@@ -1,11 +1,6 @@
 from Disable import DisableAction
-from MoveHand import (
-    MoveHandAction, 
-    CloseHandAction, 
-    OpenHandAction, 
-    GrabObjectAction, 
-    ReleaseObjectAction
-)
+from MoveHand import (MoveHandAction, CloseHandAction, OpenHandAction,
+                      GrabObjectAction, ReleaseObjectAction)
 from MoveUntilTouch import MoveUntilTouchAction
 from PlaceObject import PlaceObjectAction
 from Plan import PlanAction, PlanToTSRAction

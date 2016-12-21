@@ -1,6 +1,7 @@
 from .base import Action, Solution, ExecutableSolution, to_key, from_key
 from prpy.rave import AllDisabled
 
+
 class DisableExecutableSolution(ExecutableSolution):
     def __init__(self, solution, wrapped_solution):
         """
@@ -20,8 +21,10 @@ class DisableExecutableSolution(ExecutableSolution):
         Disable all required objects, then call execute on the wrapped ExecutableSolution
         """
         objects = self.solution.action.get_objects(env)
-        with AllDisabled(env, objects, padding_only=self.solution.action.padding_only):
+        with AllDisabled(
+                env, objects, padding_only=self.solution.action.padding_only):
             return self.wrapped_solution.execute(env, simulate)
+
 
 class DisableSolution(Solution, ExecutableSolution):
     def __init__(self, action, wrapped_solution):
@@ -30,10 +33,12 @@ class DisableSolution(Solution, ExecutableSolution):
         @param wrapped_solution The Solution or ExecutableSolution that should be called with
         the objects specified in the action Disabled
         """
-        Solution.__init__(self, action, 
-                          deterministic=wrapped_solution.deterministic,
-                          precondition=wrapped_solution.precondition,
-                          postcondition=wrapped_solution.postcondition)
+        Solution.__init__(
+            self,
+            action,
+            deterministic=wrapped_solution.deterministic,
+            precondition=wrapped_solution.precondition,
+            postcondition=wrapped_solution.postcondition)
 
         self.wrapped_solution = wrapped_solution
 
@@ -62,24 +67,32 @@ class DisableSolution(Solution, ExecutableSolution):
         """
         objects = self.action.get_objects(env)
         with AllDisabled(env, objects, padding_only=self.action.padding_only):
-            executable_solution =  self.wrapped_solution.postprocess(env)
-        return DisableExecutableSolution(solution=self, wrapped_solution=executable_solution)
-            
-class DisableAction(Action):
+            executable_solution = self.wrapped_solution.postprocess(env)
+        return DisableExecutableSolution(
+            solution=self, wrapped_solution=executable_solution)
 
-    def __init__(self, objects, wrapped_action, padding_only=False, name=None, checkpoint=False):
+
+class DisableAction(Action):
+    def __init__(self,
+                 objects,
+                 wrapped_action,
+                 padding_only=False,
+                 name=None,
+                 checkpoint=False):
         """
         @param objects The list of objects to disable during planning and execution
         @param wrapped_action The action to call while objects are disabled
         @param padding_only If true, only disable padding on the objects
         @param name The name of the action
         """
-        super(DisableAction, self).__init__(name=name, precondition=wrapped_action.precondition,
-                                            postcondition=wrapped_action.postcondition,
-                                            checkpoint=checkpoint)
+        super(DisableAction, self).__init__(
+            name=name,
+            precondition=wrapped_action.precondition,
+            postcondition=wrapped_action.postcondition,
+            checkpoint=checkpoint)
         self.action = wrapped_action
         self._objects = [to_key(o) for o in objects]
-        self.padding_only=padding_only
+        self.padding_only = padding_only
 
     def get_name(self):
         """
@@ -105,6 +118,6 @@ class DisableAction(Action):
         """
         objects = self.get_objects(env)
         with AllDisabled(env, objects, padding_only=self.padding_only):
-            solution =  self.action.plan(env)
+            solution = self.action.plan(env)
 
         return DisableSolution(action=self, wrapped_solution=solution)

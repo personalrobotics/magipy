@@ -1,11 +1,20 @@
 from .base import from_key, to_key
 from .Plan import PlanAction
 
+
 class PlaceObjectAction(PlanAction):
-    
-    def __init__(self, robot, obj, on_obj, active_indices, active_manipulator,
-                 height=0.04, allowed_tilt=0.0, args=None, 
-                 kwargs=None, planner=None, name=None):
+    def __init__(self,
+                 robot,
+                 obj,
+                 on_obj,
+                 active_indices,
+                 active_manipulator,
+                 height=0.04,
+                 allowed_tilt=0.0,
+                 args=None,
+                 kwargs=None,
+                 planner=None,
+                 name=None):
         """
         Places an object onto another object by using the 'point_on' and 'place' tsrs
         @param robot The robot 
@@ -19,19 +28,25 @@ class PlaceObjectAction(PlanAction):
         @param kwargs Extra keyword arguments to pass to the planner
         @param planner A specific planner to use - if None, robot.planner is used
         """
-        super(PlaceObjectAction, self).__init__(robot, active_indices, active_manipulator,
-                                                method='PlanToTSR', args=args, kwargs=kwargs, 
-                                                planner=planner, name=name)
+        super(PlaceObjectAction, self).__init__(
+            robot,
+            active_indices,
+            active_manipulator,
+            method='PlanToTSR',
+            args=args,
+            kwargs=kwargs,
+            planner=planner,
+            name=name)
         self._obj = to_key(obj)
         self._on_obj = to_key(on_obj)
         self.orig_args = args if args is not None else list()
-        
+
         self.height = height
         self.allowed_tilt = allowed_tilt
 
     def get_obj(self, env):
         return from_key(env, self._obj)
-    
+
     def get_on_obj(self, env):
         return from_key(env, self._on_obj)
 
@@ -49,14 +64,20 @@ class PlaceObjectAction(PlanAction):
         obj_extents = obj.ComputeAABB().extents()
         obj_radius = max(obj_extents[0], obj_extents[1])
 
-        on_obj_tsr = robot.tsrlibrary(on_obj, 'point_on', padding=obj_radius, 
-                                      manip=active_manipulator,
-                                      allowed_tilt=self.allowed_tilt,
-                                      vertical_offset=self.height)
-        
+        on_obj_tsr = robot.tsrlibrary(
+            on_obj,
+            'point_on',
+            padding=obj_radius,
+            manip=active_manipulator,
+            allowed_tilt=self.allowed_tilt,
+            vertical_offset=self.height)
+
         # Now use this to get a tsr for end-effector poses
-        place_tsr = robot.tsrlibrary(obj, 'place', pose_tsr_chain=on_obj_tsr[0],
-                                     manip=active_manipulator)
+        place_tsr = robot.tsrlibrary(
+            obj,
+            'place',
+            pose_tsr_chain=on_obj_tsr[0],
+            manip=active_manipulator)
 
         self.args = [place_tsr] + self.orig_args
 

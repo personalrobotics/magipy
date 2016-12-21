@@ -1,4 +1,3 @@
-
 class RealParameter(object):
     def __init__(self, min_value, max_value, name=None):
         self.min_value = min_value

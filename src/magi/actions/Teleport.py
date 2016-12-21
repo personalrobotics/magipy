@@ -1,6 +1,7 @@
 from .base import Action, ExecutableSolution, Solution, from_key, to_key
 from openravepy import Robot, KinBody
 
+
 class TeleportSolution(Solution, ExecutableSolution):
     def __init__(self, action, obj_transform):
         """
@@ -17,7 +18,8 @@ class TeleportSolution(Solution, ExecutableSolution):
         @return An OpenRAVE state saver for the object we are teleporting
         """
         obj = self.action.get_obj(env)
-        return obj.CreateKinBodyStateSaver(KinBody.SaveParameters.LinkTransformation)
+        return obj.CreateKinBodyStateSaver(
+            KinBody.SaveParameters.LinkTransformation)
 
     def jump(self, env):
         """
@@ -49,6 +51,7 @@ class TeleportSolution(Solution, ExecutableSolution):
 
         return
 
+
 class TeleportAction(Action):
     def __init__(self, obj, xyz_offset, robot=None, name=None, **kwargs):
         """
@@ -58,14 +61,14 @@ class TeleportAction(Action):
         @param robot If not None, have the robot grab the object after teleporting
         """
         super(TeleportAction, self).__init__(name=name)
-                               
+
         if robot is None:
             self._robot = None
         else:
             self._robot = to_key(robot)
         self._obj = to_key(obj)
         self.xyz_offset = xyz_offset
-        
+
     def get_robot(self, env):
         """
         @param env The OpenRAVE environment
@@ -89,6 +92,6 @@ class TeleportAction(Action):
         """
         obj = self.get_obj(env)
         obj_transform = obj.GetTransform()
-        obj_transform[:3,3] += self.xyz_offset
-        
+        obj_transform[:3, 3] += self.xyz_offset
+
         return TeleportSolution(self, obj_transform=obj_transform)

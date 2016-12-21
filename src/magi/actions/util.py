@@ -10,12 +10,8 @@ def get_feasible_path(robot, path):
     """
     from numpy import concatenate
     from openravepy import RaveCreateTrajectory, Robot, planningutils
-    from prpy.util import (
-        ComputeUnitTiming,
-        CopyTrajectory,
-        GetCollisionCheckPts,
-        IsTimedTrajectory
-    )
+    from prpy.util import (ComputeUnitTiming, CopyTrajectory,
+                           GetCollisionCheckPts, IsTimedTrajectory)
 
     env = robot.GetEnv()
     path_cspec = path.GetConfigurationSpecification()
@@ -24,8 +20,7 @@ def get_feasible_path(robot, path):
     # Create a ConfigurationSpecification containing only positions.
     cspec = path.GetConfigurationSpecification()
 
-    with robot.CreateRobotStateSaver(
-            Robot.SaveParameters.LinkTransformation):
+    with robot.CreateRobotStateSaver(Robot.SaveParameters.LinkTransformation):
 
         # Check for collision. Compute a unit timing to simplify this.
         if IsTimedTrajectory(path):
@@ -42,20 +37,18 @@ def get_feasible_path(robot, path):
                 t_collision = t_prev
                 break
             t_prev = t
-            
+
     # Build a path (with no timing) that stops before collision.
     output_path = RaveCreateTrajectory(env, '')
 
     if t_collision is not None:
         end_idx = unit_path.GetFirstWaypointIndexAfterTime(t_collision)
         if end_idx > 0:
-            waypoints = unit_path.GetWaypoints(
-                0, end_idx, cspec)
+            waypoints = unit_path.GetWaypoints(0, end_idx, cspec)
         else:
             waypoints = list()
         waypoints = concatenate((waypoints,
-            unit_path.Sample(t_collision, cspec)
-        ))
+                                 unit_path.Sample(t_collision, cspec)))
 
         output_path.Init(cspec)
         output_path.Insert(0, waypoints)
@@ -63,4 +56,3 @@ def get_feasible_path(robot, path):
         output_path.Clone(path, 0)
 
     return output_path, t_collision is not None
-

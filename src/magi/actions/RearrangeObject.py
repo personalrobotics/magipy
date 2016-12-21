@@ -2,8 +2,8 @@ from .base import Action, ActionError, ExecutableSolution, Solution, from_key, t
 import logging
 logger = logging.getLogger(__name__)
 
+
 class RearrangeObjectExecutableSolution(ExecutableSolution):
-    
     def __init__(self, solution, traj):
         """
         @param solution The solution this ExecutableSolution was generated from
@@ -31,9 +31,10 @@ class RearrangeObjectExecutableSolution(ExecutableSolution):
 
         from prpy.util import CopyTrajectory, Timer, SetTrajectoryTags
         traj_copy = CopyTrajectory(self.traj, env=env)
-                    
+
         from openravepy import Robot
-        with robot.CreateRobotStateSaver( Robot.SaveParameters.ActiveManipulator ):
+        with robot.CreateRobotStateSaver(
+                Robot.SaveParameters.ActiveManipulator):
             robot.SetActiveManipulator(manip)
 
             from or_pushing.push_planner_module import PushPlannerModule
@@ -46,9 +47,9 @@ class RearrangeObjectExecutableSolution(ExecutableSolution):
             # Execute the trajectory
             with Timer() as timer:
                 traj = robot.ExecuteTrajectory(traj_copy)
-            SetTrajectoryTags(traj, {Tags.EXECUTION_TIME: timer.get_duration()}, 
-                              append=True)
-            
+            SetTrajectoryTags(
+                traj, {Tags.EXECUTION_TIME: timer.get_duration()}, append=True)
+
             module.SetFinalObjectPoses(ompl_path)
         else:
             # We want to simulate the full trajectory, including the 
@@ -57,9 +58,10 @@ class RearrangeObjectExecutableSolution(ExecutableSolution):
             traj = traj_copy
             with Timer() as timer:
                 module.ExecutePath(ompl_path)
-            SetTrajectoryTags(traj, {Tags.EXECUTION_TIME: timer.get_duration()},
-                              append=True)
+            SetTrajectoryTags(
+                traj, {Tags.EXECUTION_TIME: timer.get_duration()}, append=True)
         return traj
+
 
 class RearrangeObjectSolution(Solution):
     def __init__(self, action, traj, deterministic):
@@ -69,7 +71,8 @@ class RearrangeObjectSolution(Solution):
         @param deterministic True if the traj for this Solution was generated
         with a deterministic planner
         """
-        super(RearrangeObjectSolution, self).__init__(action, determinsitic=deterministic)
+        super(RearrangeObjectSolution, self).__init__(
+            action, determinsitic=deterministic)
         self.traj = traj
 
     def save(self, env):
@@ -83,12 +86,19 @@ class RearrangeObjectSolution(Solution):
 
         from contextlib import nested
         from openravepy import Robot, KinBody
-        savers = [robot.CreateRobotStateSaver(
-            Robot.SaveParameters.LinkTransformation)]
-        savers += [b.CreateKinBodyStateSaver(
-            KinBody.SaveParameters.LinkTransformation) for b in movable_objects]
-        savers += [pushed_obj.CreateKinBodyStateSaver(
-            KinBody.SaveParameters.LinkTransformation) ]
+        savers = [
+            robot.CreateRobotStateSaver(
+                Robot.SaveParameters.LinkTransformation)
+        ]
+        savers += [
+            b.CreateKinBodyStateSaver(
+                KinBody.SaveParameters.LinkTransformation)
+            for b in movable_objects
+        ]
+        savers += [
+            pushed_obj.CreateKinBodyStateSaver(
+                KinBody.SaveParameters.LinkTransformation)
+        ]
         return nested(*savers)
 
     def jump(self, env):
@@ -103,7 +113,7 @@ class RearrangeObjectSolution(Solution):
         from or_pushing.push_planner_module import PushPlannerModule
         module = PushPlannerModule(env, robot)
         module.Initialize(**planner_kwargs)
-        module.SetFinalObjectPoses(ompl_path)                      
+        module.SetFinalObjectPoses(ompl_path)
 
     def postprocess(self, env):
         """
@@ -113,9 +123,17 @@ class RearrangeObjectSolution(Solution):
 
         return RearrangeObjectExecutableSolution(solution=self, traj=self.traj)
 
+
 class RearrangeObjectAction(Action):
-    def __init__(self, manipulator, obj, on_obj, goal_pose, goal_epsilon=0.02, 
-                 movables=None, required=True, name=None,
+    def __init__(self,
+                 manipulator,
+                 obj,
+                 on_obj,
+                 goal_pose,
+                 goal_epsilon=0.02,
+                 movables=None,
+                 required=True,
+                 name=None,
                  kwargs=None):
         """
         @param manipulator The manipulator to use to push the object
@@ -181,45 +199,53 @@ class RearrangeObjectAction(Action):
             from or_pushing.discrete_search_push_planner import DiscreteSearchPushPlanner
             planner = DiscreteSearchPushPlanner(env)
         except ImportError:
-            raise ActionError("Unable to create PushPlanner. Is the randomized_rearrangement_planning"
-                          "repository checked out in your workspace?")
+            raise ActionError(
+                "Unable to create PushPlanner. Is the randomized_rearrangement_planning"
+                "repository checked out in your workspace?")
 
         on_obj = self.get_on_obj(env)
         manipulator = self.get_manipulator(env)
         robot = self.get_robot(env)
         movables = self.get_movables(env)
         obj = self.get_pushed_object(env)
-        
+
         # Make the state bounds be at the edges of the table
         from prpy.util import ComputeEnabledAABB
         with env:
             on_obj_aabb = ComputeEnabledAABB(on_obj)
         on_obj_pos = on_obj_aabb.pos()
         on_obj_extents = on_obj_aabb.extents()
-        sbounds = {'high': [on_obj_pos[0] + on_obj_extents[0],
-                            on_obj_pos[1] + on_obj_extents[1],
-                            2.*numpy.pi],
-                   'low': [on_obj_pos[0] - on_obj_extents[0],
-                           on_obj_pos[1] - on_obj_extents[1],
-                           0]}
-        
+        sbounds = {
+            'high': [
+                on_obj_pos[0] + on_obj_extents[0],
+                on_obj_pos[1] + on_obj_extents[1], 2. * numpy.pi
+            ],
+            'low': [
+                on_obj_pos[0] - on_obj_extents[0],
+                on_obj_pos[1] - on_obj_extents[1], 0
+            ]
+        }
+
         # Assume we want to keep the current orientation and heigh of the manipulator
         #   throughout the push
         with env:
             ee_pushing_transform = manipulator.GetTransform()
-        ee_pushing_transform[:2,3] = [0., 0.] # ignore x,y pose
+        ee_pushing_transform[:2, 3] = [0., 0.]  # ignore x,y pose
 
         from prpy.planning import PlanningError
         try:
             with robot.CreateRobotStateSaver():
                 robot.SetActiveManipulator(manipulator)
-                traj = planner.PushToPose(robot, obj, self.goal_pose,
-                                          state_bounds=sbounds,
-                                          movable_objects=movables,
-                                          pushing_model='quasistatic',
-                                          pushing_manifold=ee_pushing_transform.flatten().tolist(),
-                                          goal_radius=self.goal_epsilon,
-                                          **self.kwargs)
+                traj = planner.PushToPose(
+                    robot,
+                    obj,
+                    self.goal_pose,
+                    state_bounds=sbounds,
+                    movable_objects=movables,
+                    pushing_model='quasistatic',
+                    pushing_manifold=ee_pushing_transform.flatten().tolist(),
+                    goal_radius=self.goal_epsilon,
+                    **self.kwargs)
             self.ompl_path = planner.GetPlannedPath()
             self.planner_params = planner.GetPlannerParameters()
 
@@ -229,17 +255,19 @@ class RearrangeObjectAction(Action):
             path_tags = GetTrajectoryTags(path)
             deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
             if deterministic is None:
-                logger.warn("Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
-                            "Assuming non-deterministic.")
+                logger.warn(
+                    "Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
+                    "Assuming non-deterministic.")
                 deterministic = False
-                
-            
+
         except PlanningError as e:
             filepath = '/tmp'
             planner.WritePlannerData(filepath)
             raise ActionError(str(e), deterministic=e.deterministic)
 
         if traj is None:
-            raise ActionError('Failed to find pushing plan', deterministic=deterministic)
-        
-        return RearrangeObjectSolution(action=self, traj=traj, deterministic=deterministic)
+            raise ActionError(
+                'Failed to find pushing plan', deterministic=deterministic)
+
+        return RearrangeObjectSolution(
+            action=self, traj=traj, deterministic=deterministic)

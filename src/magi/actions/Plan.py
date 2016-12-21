@@ -5,6 +5,7 @@ from prpy.util import CopyTrajectory
 import logging
 logger = logging.getLogger(__name__)
 
+
 class PlanExecutableSolution(ExecutableSolution):
     def __init__(self, solution, traj):
         """
@@ -33,12 +34,14 @@ class PlanExecutableSolution(ExecutableSolution):
         traj_copy = CopyTrajectory(self.traj, env=env)
         with Timer() as timer:
             traj = robot.ExecuteTrajectory(traj_copy)
-        SetTrajectoryTags(traj, {Tags.EXECUTION_TIME: timer.get_duration()}, append=True)
+        SetTrajectoryTags(
+            traj, {Tags.EXECUTION_TIME: timer.get_duration()}, append=True)
 
         from ..logging_utils import log_execution_data
         log_execution_data(traj, self.action.get_name())
 
         return traj
+
 
 class PlanSolution(Solution):
     def __init__(self, action, path, deterministic):
@@ -91,7 +94,9 @@ class PlanSolution(Solution):
             with Timer() as timer:
                 traj = robot.PostProcessPath(path_copy, timelimit=5.)
 
-            SetTrajectoryTags(traj, {Tags.POSTPROCESS_TIME: timer.get_duration()}, append=True)
+            SetTrajectoryTags(
+                traj, {Tags.POSTPROCESS_TIME: timer.get_duration()},
+                append=True)
 
             from ..logging_utils import log_postprocess_data
             log_postprocess_data(traj, self.action.get_name())
@@ -100,8 +105,16 @@ class PlanSolution(Solution):
 
 
 class PlanAction(Action):
-    def __init__(self, robot, active_indices, active_manipulator,
-                 method, args=None, kwargs=None, planner=None, name=None, checkpoint=False):
+    def __init__(self,
+                 robot,
+                 active_indices,
+                 active_manipulator,
+                 method,
+                 args=None,
+                 kwargs=None,
+                 planner=None,
+                 name=None,
+                 checkpoint=False):
         """
         @param robot The OpenRAVE robot to plan for
         @param active_indices The robot DOF indices to plan for
@@ -142,23 +155,23 @@ class PlanAction(Action):
         active_manipulator defined for this action
         """
         return from_key(env, self._active_manipulator)
-        
+
     def plan(self, env):
         """
         Execute the defined planning_method on the defined planner
         @return A PlanSolution
         @throws An ActionError if an error is encountered while planning
         """
-        from prpy.planning import PlanningError 
+        from prpy.planning import PlanningError
 
         robot = self.get_robot(env)
         active_manipulator = self.get_manipulator(env)
         planner = self.planner if self.planner is not None else robot.planner
 
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveDOF
-              | Robot.SaveParameters.ActiveManipulator):
-            
+                Robot.SaveParameters.ActiveDOF |
+                Robot.SaveParameters.ActiveManipulator):
+
             robot.SetActiveDOFs(self.active_indices)
 
             if active_manipulator is not None:
@@ -170,14 +183,17 @@ class PlanAction(Action):
                 from prpy.planning.base import Tags
                 with Timer() as timer:
                     path = planning_method(robot, *self.args, **self.kwargs)
-                SetTrajectoryTags(path, {Tags.PLAN_TIME: timer.get_duration()}, append=True)
+                SetTrajectoryTags(
+                    path, {Tags.PLAN_TIME: timer.get_duration()}, append=True)
 
                 # Mark this action as deterministic based on the traj tags
                 path_tags = GetTrajectoryTags(path)
-                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
+                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT,
+                                              None)
                 if deterministic is None:
-                    logger.warn("Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
-                                "Assuming non-deterministic.")
+                    logger.warn(
+                        "Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
+                        "Assuming non-deterministic.")
                     deterministic = False
 
                 from ..logging_utils import log_plan_data
@@ -186,11 +202,22 @@ class PlanAction(Action):
             except PlanningError as e:
                 raise ActionError(str(e), deterministic=e.deterministic)
 
-        return PlanSolution(action=self, path=path, deterministic=deterministic)
+        return PlanSolution(
+            action=self, path=path, deterministic=deterministic)
+
 
 class PlanToTSRAction(PlanAction):
-    def __init__(self, robot, obj, tsr_name, active_indices, active_manipulator,
-                 tsr_args=None, args=None, kwargs=None, planner=None, name=None):
+    def __init__(self,
+                 robot,
+                 obj,
+                 tsr_name,
+                 active_indices,
+                 active_manipulator,
+                 tsr_args=None,
+                 args=None,
+                 kwargs=None,
+                 planner=None,
+                 name=None):
         """
         Runs a PlanToTSR method
         @param robot The robot the tsr is defined on
@@ -203,9 +230,15 @@ class PlanToTSRAction(PlanAction):
         @param kwargs Extra keyword arguments to pass to the planner
         @param planner A specific planner to use - if None, robot.planner is used
         """
-        super(PlanToTSRAction, self).__init__(robot, active_indices, active_manipulator,
-                                              method='PlanToTSR', args=args, kwargs=kwargs, 
-                                              planner=planner, name=name)
+        super(PlanToTSRAction, self).__init__(
+            robot,
+            active_indices,
+            active_manipulator,
+            method='PlanToTSR',
+            args=args,
+            kwargs=kwargs,
+            planner=planner,
+            name=name)
         self._obj = to_key(obj)
         self.tsr_name = tsr_name
         self.orig_args = args if args is not None else list()
@@ -238,9 +271,17 @@ class PlanToTSRAction(PlanAction):
         with prpy.viz.RenderTSRList(tsr_list, env):
             return super(PlanToTSRAction, self).plan(env)
 
+
 class PlanEndEffectorStraight(PlanAction):
-    def __init__(self, robot, active_indices, active_manipulator, distance,
-                 args=None, kwargs=None, planner=None, name=None):
+    def __init__(self,
+                 robot,
+                 active_indices,
+                 active_manipulator,
+                 distance,
+                 args=None,
+                 kwargs=None,
+                 planner=None,
+                 name=None):
         """
         Runs a PlanToTSR method
         @param robot The robot the tsr is defined on
@@ -251,10 +292,16 @@ class PlanEndEffectorStraight(PlanAction):
         @param kwargs Extra keyword arguments to pass to the planner
         @param planner A specific planner to use - if None, robot.planner is used
         """
-        super(PlanEndEffectorStraight, self).__init__(robot, active_indices, active_manipulator,
-                                                      method='PlanToEndEffectorOffset', args=args, kwargs=kwargs, 
-                                                      planner=planner, name=name)
-        
+        super(PlanEndEffectorStraight, self).__init__(
+            robot,
+            active_indices,
+            active_manipulator,
+            method='PlanToEndEffectorOffset',
+            args=args,
+            kwargs=kwargs,
+            planner=planner,
+            name=name)
+
         self.distance = distance
 
     def plan(self, env):
@@ -266,9 +313,8 @@ class PlanEndEffectorStraight(PlanAction):
         active_manipulator = self.get_manipulator(env)
 
         # Move in the direction of the z-axis of the manipulator
-        direction = active_manipulator.GetEndEffectorTransform()[:3,2]
+        direction = active_manipulator.GetEndEffectorTransform()[:3, 2]
         self.kwargs['direction'] = direction
         self.kwargs['distance'] = self.distance
 
         return super(PlanEndEffectorStraight, self).plan(env)
-    

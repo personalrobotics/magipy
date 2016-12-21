@@ -6,6 +6,7 @@ import numpy
 import logging
 logger = logging.getLogger(__name__)
 
+
 class MoveUntilTouchExecutableSolution(ExecutableSolution):
     def __init__(self, solution, traj):
         """
@@ -31,12 +32,12 @@ class MoveUntilTouchExecutableSolution(ExecutableSolution):
         manipulator = self.action.get_manipulator(env)
         robot = manipulator.GetRobot()
         traj = CopyTrajectory(self.traj, env=env)
-        touched=False
+        touched = False
         try:
             robot.ExecuteTrajectory(traj)
         except TrajectoryAborted:
             touched = True
-        
+
         return touched
 
 
@@ -48,7 +49,8 @@ class MoveUntilTouchSolution(Solution):
         @param deterministic True if this Solution was generated
         using a deterministic planner
         """
-        super(MoveUntilTouchSolution, self).__init__(action, deterministic=deterministic)
+        super(MoveUntilTouchSolution, self).__init__(
+            action, deterministic=deterministic)
         self.path = path
 
     def save(self, env):
@@ -73,8 +75,8 @@ class MoveUntilTouchSolution(Solution):
         with env:
             # Compute the expected force direction in the sensor frame.
             hand_pose = manipulator.GetEndEffectorTransform()
-            relative_direction = numpy.dot(
-                hand_pose[0:3, 0:3], self.action.direction)
+            relative_direction = numpy.dot(hand_pose[0:3, 0:3],
+                                           self.action.direction)
 
             # Tell the controller to stop on force/torque input.
             path = CopyTrajectory(self.path, env=env)
@@ -87,9 +89,7 @@ class MoveUntilTouchSolution(Solution):
             # Compute the trajectory timing. This is potentially slow.
             traj = robot.PostProcessPath(path)
 
-        return MoveUntilTouchExecutableSolution(
-            solution=self,
-            traj=traj)
+        return MoveUntilTouchExecutableSolution(solution=self, traj=traj)
 
     def jump(self, env):
         """
@@ -101,7 +101,7 @@ class MoveUntilTouchSolution(Solution):
 
         with robot.CreateRobotStateSaver(Robot.SaveParameters.ActiveDOF):
             robot.SetActiveDOFs(manipulator.GetArmIndices())
-            cspec= robot.GetActiveConfigurationSpecification()
+            cspec = robot.GetActiveConfigurationSpecification()
 
             # Jump to the end of the trajectory.
             robot.SetActiveDOFValues(
@@ -109,8 +109,16 @@ class MoveUntilTouchSolution(Solution):
 
 
 class MoveUntilTouchAction(Action):
-    def __init__(self, manipulator, direction, min_distance, max_distance,
-                 target_bodies, force_magnitude=5., torque=None, planner=None, name=None):
+    def __init__(self,
+                 manipulator,
+                 direction,
+                 min_distance,
+                 max_distance,
+                 target_bodies,
+                 force_magnitude=5.,
+                 torque=None,
+                 planner=None,
+                 name=None):
         """
         @param manipulator The manipulator to move
         @param direction The direction (3 dim vector - [x,y,z] in world coordinates)
@@ -139,7 +147,7 @@ class MoveUntilTouchAction(Action):
             self.torque = numpy.array(torque, dtype='float')
         else:
             self.torque = numpy.array([127.] * 3)
-        
+
     def get_manipulator(self, env):
         return from_key(env, self._manipulator)
 
@@ -162,15 +170,17 @@ class MoveUntilTouchAction(Action):
         env = robot.GetEnv()
 
         start_point = manipulator.GetEndEffectorTransform()[0:3, 0]
-        ssavers = [ robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveDOF
-              | Robot.SaveParameters.ActiveManipulator
-              | Robot.SaveParameters.LinkTransformation) ]
+        ssavers = [
+            robot.CreateRobotStateSaver(
+                Robot.SaveParameters.ActiveDOF | Robot.SaveParameters.
+                ActiveManipulator | Robot.SaveParameters.LinkTransformation)
+        ]
         for body in target_bodies:
             # ensure we preserve any enable-disabling that wraps
             # this function
-            ssavers += [ body.CreateKinBodyStateSaver(
-                KinBody.SaveParameters.LinkEnable) ]
+            ssavers += [
+                body.CreateKinBodyStateSaver(KinBody.SaveParameters.LinkEnable)
+            ]
 
         from contextlib import nested
         with nested(*ssavers),\
@@ -192,16 +202,18 @@ class MoveUntilTouchAction(Action):
                 from prpy.util import GetTrajectoryTags
                 from prpy.planning.base import Tags
                 path_tags = GetTrajectoryTags(path)
-                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
+                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT,
+                                              None)
                 if deterministic is None:
-                    logger.warn("Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
-                                "Assuming non-deterministic.")
+                    logger.warn(
+                        "Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
+                        "Assuming non-deterministic.")
                     deterministic = False
-
 
             except PlanningError as e:
                 raise ActionError(str(e), deterministic=e.deterministic)
 
         from .util import get_feasible_path
         path, _ = get_feasible_path(robot, path)
-        return MoveUntilTouchSolution(action=self, path=path, deterministic=deterministic)
+        return MoveUntilTouchSolution(
+            action=self, path=path, deterministic=deterministic)

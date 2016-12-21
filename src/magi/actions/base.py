@@ -3,8 +3,8 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class SaveAndJump(object):
-    
     def __init__(self, solution, env):
         """
         @param solution A solution object
@@ -31,14 +31,19 @@ class SaveAndJump(object):
         retval = self.cm.__exit__(exc_type, exc_value, traceback)
         return retval
 
-class Validate(object): 
-    def __init__(self, env, precondition=None, postcondition=None, detector=None):
+
+class Validate(object):
+    def __init__(self,
+                 env,
+                 precondition=None,
+                 postcondition=None,
+                 detector=None):
         self.env = env
         self.precondition = precondition
         self.postcondition = postcondition
         self.detector = detector
 
-    def __enter__(self): 
+    def __enter__(self):
         logger.info('Validate precondition: %s', self.precondition)
         if self.precondition is not None:
             self.precondition.validate(self.env, self.detector)
@@ -58,24 +63,30 @@ class ActionError(Exception):
         assert self.KNOWN_KWARGS.issuperset(kwargs.keys())
         self.deterministic = kwargs.get('deterministic', None)
 
+
 class CheckpointError(ActionError):
     pass
 
-class ExecutionError(Exception):
 
-    def __init__(self, message='', solution=None): 
+class ExecutionError(Exception):
+    def __init__(self, message='', solution=None):
         super(ExecutionError, self).__init__(message)
         self.failed_solution = solution
 
-class ValidationError(Exception): 
+
+class ValidationError(Exception):
     def __init__(self, message='', validator=None):
         super(ValidationError, self).__init__(message)
         self.failed_validator = validator
 
+
 class Action(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, name=None, precondition=None, postcondition=None,
+    def __init__(self,
+                 name=None,
+                 precondition=None,
+                 postcondition=None,
                  checkpoint=False):
         """
         @param name The name of the action
@@ -139,7 +150,11 @@ class Action(object):
 class Solution(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, action, deterministic, precondition=None, postcondition=None):
+    def __init__(self,
+                 action,
+                 deterministic,
+                 precondition=None,
+                 postcondition=None):
         """
         @param deterministic True if calling the plan method on the action 
         multiple times will give the exact same solution
@@ -286,7 +301,7 @@ def to_key(obj):
     else:
         raise TypeError('Unknown type "{:s}".'.format(str(type(obj))))
 
-    return (type(obj),) + key
+    return (type(obj), ) + key
 
 
 def from_key(env, key):

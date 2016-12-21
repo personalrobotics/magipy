@@ -5,8 +5,8 @@ from base import to_key, from_key, ExecutionError
 import logging
 logger = logging.getLogger(__name__)
 
-class GraspValidator(Validator):
 
+class GraspValidator(Validator):
     def __init__(self, infile, robot, dof_indices, name='GraspValidator'):
         """
         This class validates a grasp by using performing
@@ -40,11 +40,10 @@ class GraspValidator(Validator):
             # Convert everything else to float
             row[:-1] = [float(v) for v in row[:-1]]
 
-
         # Now build the classifier
         self.data = numpy.array(data)
-        self.X = self.data[:,:-2]
-        self.y = self.data[:,-1]
+        self.X = self.data[:, :-2]
+        self.y = self.data[:, -1]
 
         self.clf = svm.SVC()
         self.clf.fit(self.X, self.y)
@@ -58,7 +57,7 @@ class GraspValidator(Validator):
         @param env The OpenRAVE environment
         """
         return from_key(env, self._robot)
-        
+
     def validate(self, env):
         """
         @throws An ExecutionError if the grasp is not valid
@@ -73,10 +72,8 @@ class GraspValidator(Validator):
             raise ExecutionError('Grasp failed validation')
 
 
-class GraspMeanValidator(Validator): 
-    
-
-    def __init__(self, object_type, name='GraspMeanValidator'): 
+class GraspMeanValidator(Validator):
+    def __init__(self, object_type, name='GraspMeanValidator'):
         """ 
         Validates grasp by comparing current grasp dof values 
         with (simulated) success dof values
@@ -84,25 +81,26 @@ class GraspMeanValidator(Validator):
         super(GraspMeanValidator, self).__init__(name=name)
         import numpy as np
 
-        if object_type == 'glass': 
+        if object_type == 'glass':
             self.mean = np.array([1.22, 1.16, 1.2])
         elif object_type == 'bowl':
             self.mean = np.array([1.58, 1.56, 0.8])
         elif object_type == 'plate':
             self.mean = np.array([1.46, 1.46, 1.34])
         else:
-            raise ValueError('object type not one of (glass, bowl, plate)') 
+            raise ValueError('object type not one of (glass, bowl, plate)')
 
-        self.max = 1.0 # may need to be calibrated (or different value per object, but this seems to work for now. 
+        self.max = 1.0  # may need to be calibrated (or different value per object, but this seems to work for now. 
 
     def validate(self, env):
         """
         @throws An ExecutionError if the grasp is not valid
         """
         import numpy as np
-        from scipy.linalg import norm 
+        from scipy.linalg import norm
 
         difference = norm(self.mean - np.array(dof_values))
-        logger.info('GraspMeanValidator - validating grasp: "%s"', str(difference <= self.max))
+        logger.info('GraspMeanValidator - validating grasp: "%s"',
+                    str(difference <= self.max))
         if difference > self.max:
             raise ExecutionError('Grasp failed validation')

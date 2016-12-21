@@ -7,6 +7,7 @@ from prpy.util import CopyTrajectory
 import logging
 logger = logging.getLogger(__name__)
 
+
 class PushObjectExecutableSolution(ExecutableSolution):
     def __init__(self, solution, traj):
         """
@@ -42,19 +43,22 @@ class PushObjectExecutableSolution(ExecutableSolution):
 
         # Grab the object - the manipulator must be active for the grab
         #  to work properly
-        with robot.CreateRobotStateSaver(Robot.SaveParameters.ActiveManipulator):
+        with robot.CreateRobotStateSaver(
+                Robot.SaveParameters.ActiveManipulator):
             robot.SetActiveManipulator(manipulator)
             robot.Grab(obj)
 
         # Execute the trajectory, forcing the object to move with the arm
         try:
             ret_val = robot.ExecuteTrajectory(
-                CopyTrajectory(self.traj, env=env))
+                CopyTrajectory(
+                    self.traj, env=env))
         finally:
             # Release the object
             robot.Release(obj)
-        
+
         return ret_val
+
 
 class PushObjectSolution(Solution):
     def __init__(self, action, path, obj_in_hand_pose, deterministic):
@@ -66,8 +70,8 @@ class PushObjectSolution(Solution):
         @param deterministic True if the path for this Solution was created
         with a determinsitic planner
         """
-        super(PushObjectSolution, self).__init__(action, 
-                                                 deterministic=deterministic)
+        super(PushObjectSolution, self).__init__(
+            action, deterministic=deterministic)
         self.path = path
         self.obj_in_hand_pose = obj_in_hand_pose
 
@@ -77,10 +81,11 @@ class PushObjectSolution(Solution):
         @param env The OpenRAVE environment
         """
         from contextlib import nested
-        return nested(self.action.get_robot(env).CreateRobotStateSaver(
-            Robot.SaveParameters.LinkTransformation),
-                      self.action.get_object(env).CreateKinBodyStateSaver(
-                          KinBody.SaveParameters.LinkTransformation) )
+        return nested(
+            self.action.get_robot(env).CreateRobotStateSaver(
+                Robot.SaveParameters.LinkTransformation),
+            self.action.get_object(env).CreateKinBodyStateSaver(
+                KinBody.SaveParameters.LinkTransformation))
 
     def jump(self, env):
         """
@@ -97,19 +102,19 @@ class PushObjectSolution(Solution):
         obj = self.action.get_object(env)
         manipulator = self.action.get_manipulator(env)
 
-        
         with robot.CreateRobotStateSaver(Robot.SaveParameters.ActiveDOF):
             robot.SetActiveDOFs(manipulator.GetArmIndices())
             cspec = robot.GetActiveConfigurationSpecification()
-            
+
             # Now put the arm at the end of the trajectory and the object in the correct
             # place relative to the arm
             q = self.path.GetWaypoint(self.path.GetNumWaypoints() - 1, cspec)
             robot.SetActiveDOFValues(q)
 
             with env:
-                obj_pose = numpy.dot(manipulator.GetEndEffectorTransform(), self.obj_in_hand_pose)
-            
+                obj_pose = numpy.dot(manipulator.GetEndEffectorTransform(),
+                                     self.obj_in_hand_pose)
+
             obj.SetTransform(obj_pose)
 
     def postprocess(self, env):
@@ -119,16 +124,20 @@ class PushObjectSolution(Solution):
         robot = self.action.get_robot(env)
 
         with robot.CreateRobotStateSaver(Robot.SaveParameters.ActiveDOF):
-            traj = robot.PostProcessPath(
-                CopyTrajectory(self.path, env=env))
+            traj = robot.PostProcessPath(CopyTrajectory(self.path, env=env))
 
         return PushObjectExecutableSolution(solution=self, traj=traj)
 
 
 class PushObjectAction(Action):
-    
-    def __init__(self, manipulator, obj, push_distance=0.1, required=True, name=None,
-                 args=None, kwargs=None):
+    def __init__(self,
+                 manipulator,
+                 obj,
+                 push_distance=0.1,
+                 required=True,
+                 name=None,
+                 args=None,
+                 kwargs=None):
         """
         @param manipulator The manipulator to use to push the object
         @param obj The object being pushed
@@ -143,17 +152,17 @@ class PushObjectAction(Action):
         self._manipulator = to_key(manipulator)
         self._object = to_key(obj)
         self.push_distance = push_distance
-        self.required=required
+        self.required = required
 
         self.args = args if args is not None else list()
         self.kwargs = kwargs if kwargs is not None else dict()
 
     def get_manipulator(self, env):
         return from_key(env, self._manipulator)
-    
+
     def get_robot(self, env):
         return self.get_manipulator(env).GetRobot()
-    
+
     def get_object(self, env):
         return from_key(env, self._object)
 
@@ -165,9 +174,10 @@ class PushObjectAction(Action):
         """
         with manipulator.GetRobot().GetEnv():
             ee_pose = manipulator.GetEndEffectorTransform()
-        return ee_pose[:3,2]  # direction the palm (z-axis) is facing
+        return ee_pose[:3, 2]  # direction the palm (z-axis) is facing
 
-    def obj_to_hand(self, obj, manipulator, env, push_direction, push_distance):
+    def obj_to_hand(self, obj, manipulator, env, push_direction,
+                    push_distance):
         """
         Move the object so it is right next to, but not touching the manipulator
         The object is translated in the direction opposite the push_direction
@@ -181,11 +191,12 @@ class PushObjectAction(Action):
             # First move back until collision
             stepsize = 0.01
             total_distance = 0.0
-            while not env.CheckCollision(robot, obj) and total_distance <= push_distance:
-                obj_in_world[:3,3] -= stepsize*push_direction
+            while not env.CheckCollision(
+                    robot, obj) and total_distance <= push_distance:
+                obj_in_world[:3, 3] -= stepsize * push_direction
                 total_distance += stepsize
                 obj.SetTransform(obj_in_world)
-            
+
             if total_distance > push_distance:
                 # No contact made, return the object to its original pose
                 obj.SetTransform(obj_in_world)
@@ -193,7 +204,7 @@ class PushObjectAction(Action):
                 # Contact occurred, move forward until just out of collision
                 stepsize = 0.005
                 while env.CheckCollision(robot, obj):
-                    obj_in_world[:3,3] += stepsize*push_direction
+                    obj_in_world[:3, 3] += stepsize * push_direction
                     obj.SetTransform(obj_in_world)
 
     def plan(self, env):
@@ -211,47 +222,57 @@ class PushObjectAction(Action):
         path = None
         obj_pose = obj.GetTransform()
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveDOF | 
+                Robot.SaveParameters.ActiveDOF |
                 Robot.SaveParameters.ActiveManipulator |
                 Robot.SaveParameters.GrabbedBodies), \
         obj.CreateKinBodyStateSaver(
             KinBody.SaveParameters.LinkTransformation):
-            
-                
+
             robot.SetActiveManipulator(manipulator)
 
             # Get the direction of the push
             push_direction = self.get_push_direction(manipulator)
-            
+
             # Move the object into the hand
-            self.obj_to_hand(obj, manipulator, env, push_direction, self.push_distance)
+            self.obj_to_hand(obj, manipulator, env, push_direction,
+                             self.push_distance)
             robot.Grab(obj)
 
             # Save the pose of the object relative to the end-effector
-            obj_in_hand = numpy.dot(numpy.linalg.inv(manipulator.GetEndEffectorTransform()),
-                                    obj.GetTransform())
+            obj_in_hand = numpy.dot(
+                numpy.linalg.inv(manipulator.GetEndEffectorTransform()),
+                obj.GetTransform())
 
             try:
-                path = manipulator.PlanToEndEffectorOffset(direction = push_direction,
-                                                           distance = self.push_distance,
-                                                           *self.args, **self.kwargs)
+                path = manipulator.PlanToEndEffectorOffset(
+                    direction=push_direction,
+                    distance=self.push_distance,
+                    *self.args,
+                    **self.kwargs)
 
                 # Mark this action as deterministic based on the traj tags
                 from prpy.util import GetTrajectoryTags
                 from prpy.planning.base import Tags
                 path_tags = GetTrajectoryTags(path)
-                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
+                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT,
+                                              None)
                 if deterministic is None:
-                    logger.warn("Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
-                                "Assuming non-deterministic.")
+                    logger.warn(
+                        "Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
+                        "Assuming non-deterministic.")
                     deterministic = False
-
 
             except PlanningError, e:
                 deterministic = e.deterministic
                 if self.required:
                     raise ActionError(str(e), deterministic=deterministic)
                 else:
-                    logger.warn('Could not find a plan for straight line push. Ignoring.')
-           
-        return PushObjectSolution(action=self, path=path, obj_in_hand_pose=obj_in_hand, deterministic=deterministic)
+                    logger.warn(
+                        'Could not find a plan for straight line push. Ignoring.'
+                    )
+
+        return PushObjectSolution(
+            action=self,
+            path=path,
+            obj_in_hand_pose=obj_in_hand,
+            deterministic=deterministic)

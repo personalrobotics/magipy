@@ -1,6 +1,7 @@
 from .base import Action, Solution, ExecutableSolution, ExecutionError
 from abc import ABCMeta, abstractmethod
 
+
 class Validator(object):
     """
     This class allows for validating the state
@@ -9,8 +10,8 @@ class Validator(object):
     base.Validate().
     """
 
-    def __init__(self, name='Validator'): 
-        self._name = name 
+    def __init__(self, name='Validator'):
+        self._name = name
 
     @abstractmethod
     def validate(self, env, detector=None):
@@ -20,27 +21,26 @@ class Validator(object):
         """
         pass
 
-    def __str__(self): 
-        return self._name 
+    def __str__(self):
+        return self._name
 
 
-class SequenceValidator(Validator): 
+class SequenceValidator(Validator):
     def __init__(self, validators, name='SequenceValidator'):
         """
         Validates validators in-order.
         @param validators: list of validators.
         """
         Validator.__init__(self, name)
-        self.validators = validators 
-    
-    def validate(self, env, detector=None): 
+        self.validators = validators
+
+    def validate(self, env, detector=None):
         """
         @param env The OpenRAVE environment to validate
         @throws ValidationError if the environment is not valid
         """
-        for validator in self.validators: 
-            validator.validate(env, detector) 
-
+        for validator in self.validators:
+            validator.validate(env, detector)
 
 
 class ValidateSolution(Solution, ExecutableSolution):
@@ -52,10 +52,11 @@ class ValidateSolution(Solution, ExecutableSolution):
         and executed prior to validation
         @param validator The Validator to use to validate the environment after execution
         """
-        Solution.__init__(self, action, deterministic=wrapped_solution.deterministic)
+        Solution.__init__(
+            self, action, deterministic=wrapped_solution.deterministic)
         ExecutableSolution.__init__(self, self)
-        self.wrapped_solution=wrapped_solution
-        self.validator=validator
+        self.wrapped_solution = wrapped_solution
+        self.validator = validator
 
     def save(self, env):
         """
@@ -80,8 +81,10 @@ class ValidateSolution(Solution, ExecutableSolution):
         @return A ValidateSolution 
         """
         executable_solution = self.wrapped_solution.postprocess(env)
-        return ValidateSolution(action=self.action, wrapped_solution=executable_solution,
-                                validator=self.validator)
+        return ValidateSolution(
+            action=self.action,
+            wrapped_solution=executable_solution,
+            validator=self.validator)
 
     def execute(self, env, simulate):
         """
@@ -90,11 +93,11 @@ class ValidateSolution(Solution, ExecutableSolution):
         self.wrapped_solution.execute(env, simulate)
         try:
             self.validator.validate(env)
-        except ExecutionError as e: 
+        except ExecutionError as e:
             raise ExecutionError(e, solution=self)
 
-class ValidateAction(Action):
 
+class ValidateAction(Action):
     def __init__(self, validator, wrapped_action, name=None):
         """
         Meta-action that allows an action to be validated after
@@ -125,4 +128,5 @@ class ValidateAction(Action):
         @return A ValidateSolution object
         """
         solution = self.action.plan(env)
-        return ValidateSolution(action=self, wrapped_solution=solution, validator=self.validator)
+        return ValidateSolution(
+            action=self, wrapped_solution=solution, validator=self.validator)

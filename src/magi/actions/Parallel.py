@@ -2,6 +2,7 @@ from .base import Action, ActionError
 import logging
 logger = logging.getLogger(__name__)
 
+
 class ParallelAction(Action):
     def __init__(self, actions, name=None):
         """
@@ -10,7 +11,7 @@ class ParallelAction(Action):
         @param name The name of the action
         """
         super(ParallelAction, self).__init__(name=name)
-        
+
         self.actions = actions
 
     def plan(self, env):
@@ -18,15 +19,17 @@ class ParallelAction(Action):
         Randomly select and plan an action from the actions list
         and plans the action.
         """
-        
+
         num_actions = len(self.actions)
         if num_actions == 0:
-            raise ActionError("The ParallelAction contains no actions to select from")
+            raise ActionError(
+                "The ParallelAction contains no actions to select from")
 
         import random
-        idx = random.randint(0, num_actions-1)
+        idx = random.randint(0, num_actions - 1)
 
         return self.actions[idx].plan(env)
+
 
 class OptionalAction(ParallelAction):
     def __init__(self, action, name=None):
@@ -35,5 +38,5 @@ class OptionalAction(ParallelAction):
         @param name The name fo the action
         """
         from Null import NullAction
-        actions = [ NullAction(), action ]
+        actions = [NullAction(), action]
         super(OptionalAction, self).__init__(actions, name=name)
