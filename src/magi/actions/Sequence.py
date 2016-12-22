@@ -1,6 +1,6 @@
 from .base import Action, ExecutableSolution, Solution
 import logging
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class SequenceExecutableSolution(ExecutableSolution):
@@ -67,7 +67,7 @@ class SequenceSolution(Solution):
         Postprocess each solution, one at a time, in order. After a solution
         is postprocessed, the environment is saved and then jumped to the end
         of the solution before beginning postprocessing on the next solution.
-        
+
         @param env The OpenRAVE environment
         """
         executable_solutions = self._postprocess_recursive(env, self.solutions)
@@ -127,7 +127,7 @@ class SequenceAction(Action):
         if not actions:
             return []
 
-        logger.info('Planning action %s', actions[0].get_name())
+        LOGGER.info('Planning action %s', actions[0].get_name())
         solution = actions[0].plan(env)
         with solution.save_and_jump(env):
             next_solutions = self._plan_recursive(env, actions[1:])
