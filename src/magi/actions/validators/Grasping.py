@@ -3,7 +3,7 @@ from ..validate import Validator
 from ..base import to_key, from_key, ValidationError
 
 import logging
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class GraspValidator(Validator):
@@ -22,8 +22,8 @@ class GraspValidator(Validator):
 
         data = []
         # Read in the csv file
-        with open(infile, 'r') as f:
-            reader = csv.reader(f, delimiter=' ')
+        with open(infile, 'r') as in_f:
+            reader = csv.reader(in_f, delimiter=' ')
             for row in reader:
                 data.append(row)
 
@@ -65,18 +65,18 @@ class GraspValidator(Validator):
         robot = self.get_robot(env)
         with env:
             dof_values = robot.GetDOFValues(self.dof_indices)
-        v = self.clf.predict(dof_values.reshape(1, -1))
+        pred = self.clf.predict(dof_values.reshape(1, -1))
 
         # Raise an error if the validation doesn't check out
-        if v[0] == 0:
+        if pred[0] == 0:
             raise ValidationError(
                 message='Grasp failed validation', validator=self)
 
 
 class GraspMeanValidator(Validator):
     def __init__(self, object_type, name='GraspMeanValidator'):
-        """ 
-        Validates grasp by comparing current grasp dof values 
+        """
+        Validates grasp by comparing current grasp dof values
         with (simulated) success dof values
         """
         super(GraspMeanValidator, self).__init__(name=name)
@@ -91,7 +91,9 @@ class GraspMeanValidator(Validator):
         else:
             raise ValueError('object type not one of (glass, bowl, plate)')
 
-        self.max = 1.0  # may need to be calibrated (or different value per object, but this seems to work for now. 
+        # may need to be calibrated (or different value per object),
+        # but this seems to work for now.
+        self.max = 1.0
 
     def validate(self, env, detector=None):
         """
@@ -101,7 +103,7 @@ class GraspMeanValidator(Validator):
         from scipy.linalg import norm
 
         difference = norm(self.mean - np.array(dof_values))
-        logger.info('GraspMeanValidator - validating grasp: "%s"',
+        LOGGER.info('GraspMeanValidator - validating grasp: "%s"',
                     str(difference <= self.max))
         if difference > self.max:
             raise ValidationError(
