@@ -98,8 +98,8 @@ class ActionMonitor(object):
         keep_running = True
         while keep_running:
             self._redraw()
-            r = self.update_request_queue.get()
-            keep_running = not isinstance(r, MonitorStopRequest)
+            req = self.update_request_queue.get()
+            keep_running = not isinstance(req, MonitorStopRequest)
 
         plt.close()
 
@@ -128,9 +128,9 @@ class ActionMonitor(object):
         self.lock.acquire()
         try:
             self.G = G
-            for n in self.G.nodes():
-                if n not in self.node_metadata:
-                    self.node_metadata[n] = {
+            for node in self.G.nodes():
+                if node not in self.node_metadata:
+                    self.node_metadata[node] = {
                         'color': get_color(ActionResults.UNKNOWN),
                         'results': []
                     }
@@ -163,10 +163,10 @@ class ActionMonitor(object):
 
             # Add nodes for every result
             results = self.node_metadata[category]['results']
-            for ridx, r in enumerate(results):
+            for ridx, res in enumerate(results):
                 node_label = '%d_%d' % (idx, ridx)
                 G.add_node(node_label)
-                color_map[node_label] = get_color(r)
+                color_map[node_label] = get_color(res)
                 node_pos[node_label] = (0.2 * ridx, idx)
             if len(results):
                 node_label = '%d_0' % (idx)
@@ -323,8 +323,8 @@ class ActionMonitor(object):
             pos_layout[node] = (branch_id, depth)
             label_layout[node] = (branch_id, depth)
         children = self.G.successors(node)
-        for idx, s in enumerate(children):
-            self._compute_layout(s, branch_id + 2. * idx / (1.0 * depth + 5.0),
+        for idx, succ in enumerate(children):
+            self._compute_layout(succ, branch_id + 2. * idx / (1.0 * depth + 5.0),
                                  pos_layout, label_layout, depth + 1)
 
     def _draw_graph(self):
@@ -378,19 +378,18 @@ class ActionMonitor(object):
         import networkx as nx
         root_nodes = [n for n in self.G.nodes() if self.G.in_degree(n) == 0]
 
-        depth = 0
         node_pos = dict()
         label_pos = dict()
-        for idx, n in enumerate(root_nodes):
-            self._compute_layout(n, 0.2 * idx, node_pos, label_pos)
+        for idx, node in enumerate(root_nodes):
+            self._compute_layout(node, 0.2 * idx, node_pos, label_pos)
 
         max_out_degree = max([
             max(self.G.in_degree(n), self.G.out_degree(n))
             for n in self.G.nodes()
         ])
 
-        for k, v in label_pos.iteritems():
-            label_pos[k] = (0.2 * max_out_degree + 0.1, v[1])
+        for key, val in label_pos.iteritems():
+            label_pos[key] = (0.2 * max_out_degree + 0.1, val[1])
 
         nx.draw_networkx_nodes(
             self.G,
@@ -469,7 +468,7 @@ class ActionMonitor(object):
         finally:
             self.lock.release()
 
-    def set_executing_action(self, action, redraw=True):
+    def set_executing_action(self, action):
         """
         Mark the action that is currently being executed
         by the system
