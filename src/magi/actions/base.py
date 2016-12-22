@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
 
 
 class SaveAndJump(object):
@@ -17,7 +17,7 @@ class SaveAndJump(object):
         """
         First call save on the solution, then jump
         """
-        logger.debug('Begin SaveAndJump: %s', self.solution.action.get_name())
+        LOGGER.debug('Begin SaveAndJump: %s', self.solution.action.get_name())
         self.cm = self.solution.save(self.env)
         self.cm.__enter__()
         self.solution.jump(self.env)
@@ -27,7 +27,7 @@ class SaveAndJump(object):
         Exit the context manager created by calling the save function on entrance
         to this context manager
         """
-        logger.debug('End SaveAndJump: %s', (self.solution.action.get_name()))
+        LOGGER.debug('End SaveAndJump: %s', (self.solution.action.get_name()))
         retval = self.cm.__exit__(exc_type, exc_value, traceback)
         return retval
 
@@ -44,12 +44,12 @@ class Validate(object):
         self.detector = detector
 
     def __enter__(self):
-        logger.info('Validate precondition: %s', self.precondition)
+        LOGGER.info('Validate precondition: %s', self.precondition)
         if self.precondition is not None:
             self.precondition.validate(self.env, self.detector)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        logger.info('Validate postcondition: %s', self.postcondition)
+        LOGGER.info('Validate postcondition: %s', self.postcondition)
         if self.postcondition is not None:
             self.postcondition.validate(self.env, self.detector)
 
@@ -90,10 +90,10 @@ class Action(object):
                  checkpoint=False):
         """
         @param name The name of the action
-        @param precondition Validator that validates preconditions 
-        @param postcondition Validator that validates postconditions 
+        @param precondition Validator that validates preconditions
+        @param postcondition Validator that validates postconditions
         @param checkpoint True if this action is a checkpoint - once a Solution
-        is achieved neither the plan method of this action nor any of its predecessors 
+        is achieved neither the plan method of this action nor any of its predecessors
         will be called again
         """
         self._name = name
@@ -119,9 +119,9 @@ class Action(object):
 
         The environment MUST be locked when calling this method.
 
-        Ideally, planners should "with Validate(env, self.precondition)" 
+        Ideally, planners should "with Validate(env, self.precondition)"
         when calling this.
-        
+
         @param env: OpenRAVE environment
         @return Solution object
         """
@@ -156,12 +156,12 @@ class Solution(object):
                  precondition=None,
                  postcondition=None):
         """
-        @param deterministic True if calling the plan method on the action 
+        @param deterministic True if calling the plan method on the action
         multiple times will give the exact same solution
 
-        @param precondition Validator. Can be more specific than 
+        @param precondition Validator. Can be more specific than
                             action's precondition.
-        @param postcondition Validator. Can be more specific than 
+        @param postcondition Validator. Can be more specific than
                              action's postcondition.
         """
         self.action = action
@@ -173,7 +173,7 @@ class Solution(object):
         """
         Return a context manager that preserves the state of the environmnet
         then jumps the environment to the result of this solution.
-        
+
         This context manager MUST restore the environment to its
         original state before returning.
 
@@ -200,7 +200,7 @@ class Solution(object):
 
     @abstractmethod
     def jump(self, env):
-        """ 
+        """
         Set the state of the environment to the result of this solution.
 
         The input environment to this method MUST be in the same state that was
