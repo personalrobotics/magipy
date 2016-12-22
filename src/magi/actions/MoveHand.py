@@ -13,7 +13,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
         """
         @param action The Action that created this Solution
         @param dof_values A list of dof values to move the hand to
-        @param dof_indices A list of the indices of the dofs to move - 
+        @param dof_indices A list of the indices of the dofs to move -
         list ordering should correspond to dof_values
         """
         Solution.__init__(
@@ -91,7 +91,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
             for i in indices:
                 try:
                     dof_values += [waypoint[dof_indices.index(i)]]
-                except ValueError as ignored:
+                except ValueError:
                     dof_values += [None]
 
             hand.MoveHand(*dof_values, timeout=None)
@@ -116,7 +116,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
             CollisionReport,
             RaveCreateTrajectory, )
 
-        def collision_callback(report, is_physics):
+        def collision_callback(report):
             colliding_links.update([report.plink1, report.plink2])
             return CollisionAction.Ignore
 
@@ -129,10 +129,10 @@ class MoveHandSolution(Solution, ExecutableSolution):
         handle = env.RegisterCollisionCallback(collision_callback)
 
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveDOF
-                | Robot.SaveParameters.LinkTransformation),\
+            Robot.SaveParameters.ActiveDOF
+            | Robot.SaveParameters.LinkTransformation),\
              CollisionOptionsStateSaver(collision_checker,
-                CollisionOptions.ActiveDOFs):
+                                        CollisionOptions.ActiveDOFs):
 
             robot.SetActiveDOFs(dof_indices)
             q_prev = robot.GetActiveDOFValues()
@@ -248,15 +248,15 @@ class MoveHandAction(Action):
             dof_indices=self.dof_indices)
 
 
-def CloseHandAction(hand, name=None):
+def close_hand_action(hand, name=None):
     """
     Helper function that returns a MoveHandAction that closes the fingers
     @param hand The hand to close
-    @param name The name of the action - if None the name defaults 
-    to CloseHandAction
+    @param name The name of the action - if None the name defaults
+    to close_hand_action
     """
     if name is None:
-        name = 'CloseHandAction'
+        name = 'close_hand_action'
 
     return MoveHandAction(
         name=name,
@@ -265,15 +265,15 @@ def CloseHandAction(hand, name=None):
         dof_values=[2.4, 2.4, 2.4])
 
 
-def OpenHandAction(hand, name=None):
+def open_hand_action(hand, name=None):
     """
     Helper function that returns a MoveHandAction that opens the fingers completely
     @param hand The hand to open
     @param name The name of the action - if None the name defaults to
-    OpenHandAction
+    open_hand_action
     """
     if name is None:
-        name = 'OpenHandAction'
+        name = 'open_hand_action'
 
     return MoveHandAction(
         name=name,
@@ -333,7 +333,7 @@ class GrabObjectSolution(MoveHandSolution):
 
         # Now grab the object
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveManipulator):
+            Robot.SaveParameters.ActiveManipulator):
             robot.SetActiveManipulator(manipulator)
             if obj in robot.GetGrabbed():
                 robot.Release(obj)
@@ -355,7 +355,7 @@ class GrabObjectSolution(MoveHandSolution):
         robot = manipulator.GetRobot()
 
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveManipulator):
+            Robot.SaveParameters.ActiveManipulator):
             # Manipulator must be active for grab to work
             robot.SetActiveManipulator(manipulator)
             if obj in robot.GetGrabbed():
@@ -373,10 +373,10 @@ class GrabObjectAction(MoveHandAction):
                  precondition=None,
                  postcondition=None):
         """
-        Close the hand and grab an object. 
+        Close the hand and grab an object.
         @param hand The hand to grab the object
         @param obj The object to grab
-        @param dof_values The desired dof_values to move the hand to 
+        @param dof_values The desired dof_values to move the hand to
         if None, defaults to a fully closed configuration
         @param dof_indices The DOF indices corresponding to configuration specified
          in dof_values, if None defaults to only finger dofs
@@ -408,7 +408,7 @@ class GrabObjectAction(MoveHandAction):
         @return A GrabObjectSolution
         """
 
-        # Add precondition posevalidator 
+        # Add precondition posevalidator
         from validators.PoseValidator import ObjectPoseValidator
         obj = from_key(env, self._obj)
         obj_pose_validator = ObjectPoseValidator(obj.GetName(),
@@ -488,7 +488,7 @@ class ReleaseObjectsSolution(MoveHandSolution):
 class ReleaseObjectAction(MoveHandAction):
     def __init__(self, hand, obj, dof_values, dof_indices, name=None):
         """
-        Open the hand and release an object. 
+        Open the hand and release an object.
         @param hand The hand to grab the object with
         @param obj The object to release
         @param dof_values The configuration to move the hand to before releasing
@@ -515,8 +515,8 @@ class ReleaseObjectAction(MoveHandAction):
 
     def plan(self, env):
         """
-        Does nothing. 
-        @return ReleaseObjectSolution 
+        Does nothing.
+        @return ReleaseObjectSolution
         """
         return ReleaseObjectsSolution(
             action=self,
@@ -539,7 +539,7 @@ class ReleaseAllGrabbedAction(MoveHandAction):
 
         self._manipulator = to_key(hand.manipulator)
 
-    def get_obj(self, env, objname):
+    def get_obj(self, env):
         """
         Lookup the object in the environment and return it
         """
