@@ -22,7 +22,7 @@ class DisableExecutableSolution(ExecutableSolution):
         """
         objects = self.solution.action.get_objects(env)
         with AllDisabled(
-                env, objects, padding_only=self.solution.action.padding_only):
+            env, objects, padding_only=self.solution.action.padding_only):
             return self.wrapped_solution.execute(env, simulate)
 
 
