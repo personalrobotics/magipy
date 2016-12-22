@@ -17,7 +17,7 @@ class PlaceObjectAction(PlanAction):
                  name=None):
         """
         Places an object onto another object by using the 'point_on' and 'place' tsrs
-        @param robot The robot 
+        @param robot The robot
         @param obj The object to place
         @param on_obj The object 'obj' should be place on
         @param active_indices The indices of the robot that should be active during planning
