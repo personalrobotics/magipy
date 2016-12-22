@@ -26,5 +26,5 @@ class DictParameter(object):
     def sample(self):
         return {
             key: value.sample()
-            for key, value in self.parameter.iteritems()
+            for key, value in self.parameters.iteritems()
         }
