@@ -1,6 +1,6 @@
 from .base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
 import logging
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class RearrangeObjectExecutableSolution(ExecutableSolution):
@@ -18,7 +18,7 @@ class RearrangeObjectExecutableSolution(ExecutableSolution):
 
     def execute(self, env, simulate):
         """
-        Executes a rearrangement trajectory. 
+        Executes a rearrangement trajectory.
         @param env The OpenRAVE environment
         @param simulate If True, execute the action in simulation
         """
@@ -34,7 +34,7 @@ class RearrangeObjectExecutableSolution(ExecutableSolution):
 
         from openravepy import Robot
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveManipulator):
+            Robot.SaveParameters.ActiveManipulator):
             robot.SetActiveManipulator(manip)
 
             from or_pushing.push_planner_module import PushPlannerModule
@@ -52,8 +52,8 @@ class RearrangeObjectExecutableSolution(ExecutableSolution):
 
             module.SetFinalObjectPoses(ompl_path)
         else:
-            # We want to simulate the full trajectory, including the 
-            # pushing motions of the object. A method to do this is exposed via 
+            # We want to simulate the full trajectory, including the
+            # pushing motions of the object. A method to do this is exposed via
             # the module
             traj = traj_copy
             with Timer() as timer:
@@ -142,12 +142,13 @@ class RearrangeObjectAction(Action):
         @param goal_pose The [x,y] final pose of the object
         @param goal_epsilon The maximum distance away from pose the object can be at
          the end of the trajectory
-        @param movables The other objects in the environment that can be moved 
+        @param movables The other objects in the environment that can be moved
          while attempting to achieve the goal
         @param required If True, and a plan cannot be found, raise an ActionError. If False,
         and a plan cannot be found, return an empty solution so execution can proceed normally.
         @param name The name of the action
-        @param kwargs Additional keyword arguments to be passed to the planner generating the pushing trajectory
+        @param kwargs Additional keyword arguments to be
+        passed to the planner generating the pushing trajectory
         """
         super(RearrangeObjectAction, self).__init__(name=name)
         self._manipulator = to_key(manipulator)
@@ -255,15 +256,15 @@ class RearrangeObjectAction(Action):
             path_tags = GetTrajectoryTags(path)
             deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
             if deterministic is None:
-                logger.warn(
+                LOGGER.warn(
                     "Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
                     "Assuming non-deterministic.")
                 deterministic = False
 
-        except PlanningError as e:
+        except PlanningError as err:
             filepath = '/tmp'
             planner.WritePlannerData(filepath)
-            raise ActionError(str(e), deterministic=e.deterministic)
+            raise ActionError(str(err), deterministic=err.deterministic)
 
         if traj is None:
             raise ActionError(
