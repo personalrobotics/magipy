@@ -4,7 +4,7 @@ from prpy.util import CopyTrajectory
 import numpy
 
 import logging
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class MoveUntilTouchExecutableSolution(ExecutableSolution):
@@ -127,7 +127,7 @@ class MoveUntilTouchAction(Action):
         @param target_bodies Any bodies that should be disabled during planning
         @param force_magnitude The max allowable magnitude of force before considering the
           manipulator to be touching something
-        @param torque the max allowable torque before considering the manipulator to be touching 
+        @param torque the max allowable torque before considering the manipulator to be touching
           something
         @param planner The planner to use to generate the trajectory, if None robot.planner is used
         @param name The name of this action
@@ -184,9 +184,9 @@ class MoveUntilTouchAction(Action):
 
         from contextlib import nested
         with nested(*ssavers),\
-             RenderVector(
+            RenderVector(
                 start_point, self.direction, self.max_distance, env),\
-             AllDisabled(env, target_bodies):
+            AllDisabled(env, target_bodies):
 
             manipulator.SetActive()
             planner = self.planner if self.planner is not None else robot.planner
@@ -205,13 +205,13 @@ class MoveUntilTouchAction(Action):
                 deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT,
                                               None)
                 if deterministic is None:
-                    logger.warn(
+                    LOGGER.warn(
                         "Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
                         "Assuming non-deterministic.")
                     deterministic = False
 
-            except PlanningError as e:
-                raise ActionError(str(e), deterministic=e.deterministic)
+            except PlanningError as err:
+                raise ActionError(str(err), deterministic=err.deterministic)
 
         from .util import get_feasible_path
         path, _ = get_feasible_path(robot, path)
