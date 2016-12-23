@@ -30,8 +30,8 @@ def get_feasible_path(robot, path):
 
         t_collision = None
         t_prev = 0.0
-        for t, q in GetCollisionCheckPts(robot, unit_path):
-            robot.SetDOFValues(q, dof_indices)
+        for t, dofvals in GetCollisionCheckPts(robot, unit_path):
+            robot.SetDOFValues(dofvals, dof_indices)
 
             if env.CheckCollision(robot) or robot.CheckSelfCollision():
                 t_collision = t_prev
