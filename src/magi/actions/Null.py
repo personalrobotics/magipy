@@ -1,6 +1,5 @@
 from .base import Action, ActionError, Solution, ExecutableSolution
 import logging
-logger = logging.getLogger(__name__)
 
 from contextlib import contextmanager
 
