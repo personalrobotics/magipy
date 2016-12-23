@@ -5,7 +5,7 @@ from prpy.planning import PlanningError
 from prpy.util import CopyTrajectory
 
 import logging
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class PushObjectExecutableSolution(ExecutableSolution):
@@ -44,7 +44,7 @@ class PushObjectExecutableSolution(ExecutableSolution):
         # Grab the object - the manipulator must be active for the grab
         #  to work properly
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveManipulator):
+            Robot.SaveParameters.ActiveManipulator):
             robot.SetActiveManipulator(manipulator)
             robot.Grab(obj)
 
@@ -108,8 +108,8 @@ class PushObjectSolution(Solution):
 
             # Now put the arm at the end of the trajectory and the object in the correct
             # place relative to the arm
-            q = self.path.GetWaypoint(self.path.GetNumWaypoints() - 1, cspec)
-            robot.SetActiveDOFValues(q)
+            lastconfig = self.path.GetWaypoint(self.path.GetNumWaypoints() - 1, cspec)
+            robot.SetActiveDOFValues(lastconfig)
 
             with env:
                 obj_pose = numpy.dot(manipulator.GetEndEffectorTransform(),
@@ -145,8 +145,10 @@ class PushObjectAction(Action):
         @param required If True, and a plan cannot be found, raise an ActionError. If False,
         and a plan cannot be found, return an empty solution so execution can proceed normally.
         @param name The name of the action
-        @param args Additional arguments to be passed to the planner generating the pushing trajectory
-        @param kwargs Additional keyword arguments to be passed to the planner generating the pushing trajectory
+        @param args Additional arguments to be passed
+        to the planner generating the pushing trajectory
+        @param kwargs Additional keyword arguments to be passed
+        to the planner generating the pushing trajectory
         """
         super(PushObjectAction, self).__init__(name=name)
         self._manipulator = to_key(manipulator)
@@ -220,11 +222,10 @@ class PushObjectAction(Action):
         robot = self.get_robot(env)
 
         path = None
-        obj_pose = obj.GetTransform()
         with robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveDOF |
-                Robot.SaveParameters.ActiveManipulator |
-                Robot.SaveParameters.GrabbedBodies), \
+            Robot.SaveParameters.ActiveDOF |
+            Robot.SaveParameters.ActiveManipulator |
+            Robot.SaveParameters.GrabbedBodies), \
         obj.CreateKinBodyStateSaver(
             KinBody.SaveParameters.LinkTransformation):
 
@@ -257,17 +258,17 @@ class PushObjectAction(Action):
                 deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT,
                                               None)
                 if deterministic is None:
-                    logger.warn(
+                    LOGGER.warn(
                         "Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
                         "Assuming non-deterministic.")
                     deterministic = False
 
-            except PlanningError, e:
-                deterministic = e.deterministic
+            except PlanningError, err:
+                deterministic = err.deterministic
                 if self.required:
-                    raise ActionError(str(e), deterministic=deterministic)
+                    raise ActionError(str(err), deterministic=deterministic)
                 else:
-                    logger.warn(
+                    LOGGER.warn(
                         'Could not find a plan for straight line push. Ignoring.'
                     )
 
