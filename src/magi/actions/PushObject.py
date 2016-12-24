@@ -40,7 +40,7 @@ class PushObjectExecutableSolution(ExecutableSolution):
 
         # Put the object in the hand
         obj_pose = np.dot(manipulator.GetEndEffectorTransform(),
-                             self.solution.obj_in_hand_pose)
+                          self.solution.obj_in_hand_pose)
         with env:
             obj.SetTransform(obj_pose)
 
@@ -113,7 +113,7 @@ class PushObjectSolution(Solution):
 
             with env:
                 obj_pose = np.dot(manipulator.GetEndEffectorTransform(),
-                                     self.obj_in_hand_pose)
+                                  self.obj_in_hand_pose)
 
             obj.SetTransform(obj_pose)
 

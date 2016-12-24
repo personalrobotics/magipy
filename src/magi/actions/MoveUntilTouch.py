@@ -84,7 +84,7 @@ class MoveUntilTouchSolution(Solution):
             # Compute the expected force direction in the sensor frame.
             hand_pose = manipulator.GetEndEffectorTransform()
             relative_direction = np.dot(hand_pose[0:3, 0:3],
-                                           self.action.direction)
+                                        self.action.direction)
 
             # Tell the controller to stop on force/torque input.
             path = CopyTrajectory(self.path, env=env)

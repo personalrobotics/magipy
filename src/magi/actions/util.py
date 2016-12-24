@@ -48,7 +48,7 @@ def get_feasible_path(robot, path):
         else:
             waypoints = list()
         waypoints = np.concatenate((waypoints,
-                                   unit_path.Sample(t_collision, cspec)))
+                                    unit_path.Sample(t_collision, cspec)))
 
         output_path.Init(cspec)
         output_path.Insert(0, waypoints)
