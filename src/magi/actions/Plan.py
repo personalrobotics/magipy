@@ -1,8 +1,14 @@
-from .base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
-from openravepy import Robot
-from prpy.util import CopyTrajectory
-
 import logging
+
+from openravepy import Robot
+from prpy.planning import PlanningError
+from prpy.planning.base import Tags
+from prpy.util import CopyTrajectory, SetTrajectoryTags, GetTrajectoryTags, Timer
+import prpy
+
+from magi.actions.base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
+from magi.logging_utils import log_execution_data, log_plan_data, log_postprocess_data
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -29,15 +35,12 @@ class PlanExecutableSolution(ExecutableSolution):
         """
         robot = self.action.get_robot(env)
 
-        from prpy.util import Timer, SetTrajectoryTags
-        from prpy.planning.base import Tags
         traj_copy = CopyTrajectory(self.traj, env=env)
         with Timer() as timer:
             traj = robot.ExecuteTrajectory(traj_copy)
         SetTrajectoryTags(
             traj, {Tags.EXECUTION_TIME: timer.get_duration()}, append=True)
 
-        from ..logging_utils import log_execution_data
         log_execution_data(traj, self.action.get_name())
 
         return traj
@@ -87,9 +90,6 @@ class PlanSolution(Solution):
         robot = self.action.get_robot(env)
 
         with robot.CreateRobotStateSaver(Robot.SaveParameters.ActiveDOF):
-            from prpy.util import Timer, SetTrajectoryTags
-            from prpy.planning.base import Tags
-
             path_copy = CopyTrajectory(self.path, env=env)
             with Timer() as timer:
                 traj = robot.PostProcessPath(path_copy, timelimit=5.)
@@ -98,7 +98,6 @@ class PlanSolution(Solution):
                 traj, {Tags.POSTPROCESS_TIME: timer.get_duration()},
                 append=True)
 
-            from ..logging_utils import log_postprocess_data
             log_postprocess_data(traj, self.action.get_name())
 
         return PlanExecutableSolution(solution=self, traj=traj)
@@ -162,8 +161,6 @@ class PlanAction(Action):
         @return A PlanSolution
         @throws An ActionError if an error is encountered while planning
         """
-        from prpy.planning import PlanningError
-
         robot = self.get_robot(env)
         active_manipulator = self.get_manipulator(env)
         planner = self.planner if self.planner is not None else robot.planner
@@ -179,8 +176,6 @@ class PlanAction(Action):
 
             planning_method = getattr(planner, self.method)
             try:
-                from prpy.util import Timer, SetTrajectoryTags, GetTrajectoryTags
-                from prpy.planning.base import Tags
                 with Timer() as timer:
                     path = planning_method(robot, *self.args, **self.kwargs)
                 SetTrajectoryTags(
@@ -196,7 +191,6 @@ class PlanAction(Action):
                         "Assuming non-deterministic.")
                     deterministic = False
 
-                from ..logging_utils import log_plan_data
                 log_plan_data(path, self.get_name())
 
             except PlanningError as err:
@@ -267,7 +261,6 @@ class PlanToTSRAction(PlanAction):
         tsr_list = robot.tsrlibrary(obj, self.tsr_name, **self.tsr_args)
         self.args = [tsr_list] + self.orig_args
 
-        import prpy
         with prpy.viz.RenderTSRList(tsr_list, env):
             return super(PlanToTSRAction, self).plan(env)
 

@@ -1,9 +1,19 @@
-from .base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
-from openravepy import Robot, KinBody
-from prpy.util import CopyTrajectory
-import numpy
-
+from contextlib import nested
 import logging
+
+import numpy as np
+
+from openravepy import Robot, KinBody
+from prpy.exceptions import TrajectoryAborted
+from prpy.planning import PlanningError
+from prpy.planning.base import Tags
+from prpy.rave import AllDisabled
+from prpy.util import CopyTrajectory, GetTrajectoryTags
+from prpy.viz import RenderVector
+
+from magi.actions.base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
+from magi.actions.util import get_feasible_path
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -27,8 +37,6 @@ class MoveUntilTouchExecutableSolution(ExecutableSolution):
         @param simulate If True, execute in simulation
         @return True if the trajectory was aborted due to touching an object
         """
-        from prpy.exceptions import TrajectoryAborted
-
         manipulator = self.action.get_manipulator(env)
         robot = manipulator.GetRobot()
         traj = CopyTrajectory(self.traj, env=env)
@@ -75,7 +83,7 @@ class MoveUntilTouchSolution(Solution):
         with env:
             # Compute the expected force direction in the sensor frame.
             hand_pose = manipulator.GetEndEffectorTransform()
-            relative_direction = numpy.dot(hand_pose[0:3, 0:3],
+            relative_direction = np.dot(hand_pose[0:3, 0:3],
                                            self.action.direction)
 
             # Tell the controller to stop on force/torque input.
@@ -137,16 +145,16 @@ class MoveUntilTouchAction(Action):
         self._manipulator = to_key(manipulator)
         self._target_bodies = [to_key(body) for body in target_bodies]
 
-        self.direction = numpy.array(direction, dtype='float')
+        self.direction = np.array(direction, dtype='float')
         self.min_distance = float(min_distance)
         self.max_distance = float(max_distance)
         self.force_magnitude = float(force_magnitude)
         self.planner = planner
 
         if torque is not None:
-            self.torque = numpy.array(torque, dtype='float')
+            self.torque = np.array(torque, dtype='float')
         else:
-            self.torque = numpy.array([127.] * 3)
+            self.torque = np.array([127.] * 3)
 
     def get_manipulator(self, env):
         return from_key(env, self._manipulator)
@@ -160,10 +168,6 @@ class MoveUntilTouchAction(Action):
         the specified distance unless an object is touched
         @param env The OpenRAVE environment
         """
-        from prpy.planning import PlanningError
-        from prpy.rave import AllDisabled
-        from prpy.viz import RenderVector
-
         target_bodies = self.get_bodies(env, self._target_bodies)
         manipulator = self.get_manipulator(env)
         robot = manipulator.GetRobot()
@@ -182,7 +186,6 @@ class MoveUntilTouchAction(Action):
                 body.CreateKinBodyStateSaver(KinBody.SaveParameters.LinkEnable)
             ]
 
-        from contextlib import nested
         with nested(*ssavers),\
             RenderVector(
                 start_point, self.direction, self.max_distance, env),\
@@ -199,8 +202,6 @@ class MoveUntilTouchAction(Action):
                     max_distance=self.max_distance)
 
                 # Mark this action as deterministic based on the traj tags
-                from prpy.util import GetTrajectoryTags
-                from prpy.planning.base import Tags
                 path_tags = GetTrajectoryTags(path)
                 deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT,
                                               None)
@@ -213,7 +214,6 @@ class MoveUntilTouchAction(Action):
             except PlanningError as err:
                 raise ActionError(str(err), deterministic=err.deterministic)
 
-        from .util import get_feasible_path
         path, _ = get_feasible_path(robot, path)
         return MoveUntilTouchSolution(
             action=self, path=path, deterministic=deterministic)

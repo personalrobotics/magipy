@@ -1,11 +1,16 @@
-import logging
 from abc import abstractmethod
-from actions.base import ActionError
-from actions.base import CheckpointError
-from actions.Sequence import SequenceAction, SequenceSolution
-from actions.Parallel import ParallelAction
 from contextlib import contextmanager
-from Queue import Queue
+import logging
+import random
+import signal
+import sys
+
+import networkx as nx
+import numpy as np
+
+from magi.actions.Parallel import ParallelAction
+from magi.actions.Sequence import SequenceAction, SequenceSolution
+from magi.actions.base import ActionError, CheckpointError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +25,6 @@ def time_limit(seconds):
     def signal_handler(signum, frame):
         raise TimeoutException('Failed to complete task before timeout')
 
-    import signal
     signal.signal(signal.SIGALRM, signal_handler)
     signal.alarm(seconds)
     try:
@@ -125,7 +129,6 @@ class DepthFirstPlanner(Planner):
         @param action The starting HGPC action to plan from
         @param output_queue A queue of solutions to put out when a checkpoint is reached
         """
-        import networkx as nx
         self.G = nx.DiGraph(format='svg')
         _build_tree(action, self.G, self.node_map)
 
@@ -192,7 +195,6 @@ class DepthFirstPlanner(Planner):
 
         # TODO: Eventually we want to spin off threads with environment clones
         #  For now, just randomly pick a branch to walk down
-        import numpy as np
         node_order = np.random.permutation(len(node_ids))
 
         deterministic = True
@@ -394,7 +396,6 @@ class RestartPlanner(Planner):
                 ' and execution -- output_queue only used at end.'
             )
 
-        import networkx as nx
         self.G = nx.DiGraph(format='svg')
         _build_tree(action, self.G, self.node_map)
 
@@ -407,7 +408,6 @@ class RestartPlanner(Planner):
         i = 0
 
         if self.keep_trying:
-            import sys
             attempts = sys.maxsize
         else:
             attempts = self.num_attempts
@@ -438,7 +438,6 @@ class RestartPlanner(Planner):
         # TODO: Eventually we want to spin off threads with environment clones
         #  For now, just randomly pick a branch to walk down
         if len(node_ids) > 1:
-            import random
             node_id = node_ids[random.randint(0, len(node_ids) - 1)]
             LOGGER.info("Selected random start action: %s", node_id)
         else:

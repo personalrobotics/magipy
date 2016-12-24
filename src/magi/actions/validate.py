@@ -1,5 +1,6 @@
-from .base import Action, Solution, ExecutableSolution, ExecutionError
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
+
+from magi.actions.base import Action, Solution, ExecutableSolution, ExecutionError
 
 
 class Validator(object):

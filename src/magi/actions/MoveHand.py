@@ -1,6 +1,11 @@
-from .base import Action, ExecutableSolution, Solution, from_key, to_key
-from openravepy import Robot, KinBody
-import numpy
+from contextlib import nested
+
+import numpy as np
+
+from openravepy import CollisionAction, CollisionOptions, CollisionOptionsStateSaver, CollisionReport, RaveCreateTrajectory, Robot
+
+from magi.actions.base import Action, ExecutableSolution, Solution, from_key, to_key
+from magi.actions.validators.PoseValidator import ObjectPoseValidator
 
 
 class MoveHandSolution(Solution, ExecutableSolution):
@@ -24,8 +29,8 @@ class MoveHandSolution(Solution, ExecutableSolution):
             postcondition=postcondition)
         ExecutableSolution.__init__(self, self)
 
-        self.dof_values = numpy.array(dof_values, dtype='float')
-        self.dof_indices = numpy.array(dof_indices, dtype='int')
+        self.dof_values = np.array(dof_values, dtype='float')
+        self.dof_indices = np.array(dof_indices, dtype='int')
         self.traj = None
 
     def save(self, env):
@@ -109,20 +114,13 @@ class MoveHandSolution(Solution, ExecutableSolution):
         @param q_goal The goal configuration
         @param dof_indices The indices of the dofs specified in q_goal
         """
-        from openravepy import (
-            CollisionAction,
-            CollisionOptions,
-            CollisionOptionsStateSaver,
-            CollisionReport,
-            RaveCreateTrajectory, )
-
         def collision_callback(report):
             colliding_links.update([report.plink1, report.plink2])
             return CollisionAction.Ignore
 
         env = robot.GetEnv()
         collision_checker = env.GetCollisionChecker()
-        dof_indices = numpy.array(dof_indices, dtype='int')
+        dof_indices = np.array(dof_indices, dtype='int')
 
         report = CollisionReport()
 
@@ -145,24 +143,24 @@ class MoveHandSolution(Solution, ExecutableSolution):
             traj.Init(cspec)
 
             # Velocity that each joint will be moving at while active.
-            qd = numpy.sign(q_goal - q_prev) * robot.GetActiveDOFMaxVel()
+            qd = np.sign(q_goal - q_prev) * robot.GetActiveDOFMaxVel()
 
             # Duration required for each joint to reach the goal.
             durations = (q_goal - q_prev) / qd
             durations[qd == 0.] = 0.
 
             t_prev = 0.
-            events = numpy.concatenate((
+            events = np.concatenate((
                 [0.],
                 durations,
-                numpy.arange(0., durations.max(), 0.01), ))
-            mask = numpy.array([True] * len(q_goal), dtype='bool')
+                np.arange(0., durations.max(), 0.01), ))
+            mask = np.array([True] * len(q_goal), dtype='bool')
 
-            for t_curr in numpy.unique(events):
+            for t_curr in np.unique(events):
                 robot.SetActiveDOFs(dof_indices[mask])
 
                 # Disable joints that have reached the goal.
-                mask = numpy.logical_and(mask, durations >= t_curr)
+                mask = np.logical_and(mask, durations >= t_curr)
 
                 # Advance the active DOFs.
                 q_curr = q_prev.copy()
@@ -177,7 +175,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
                 robot.CheckSelfCollision(report=report)
 
                 # Check which DOF(s) are involved in the collision.
-                mask = numpy.logical_and(mask, [
+                mask = np.logical_and(mask, [
                     not any(
                         robot.DoesAffect(dof_index, link.GetIndex())
                         for link in colliding_links)
@@ -190,7 +188,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
                 q_curr[mask] += (t_curr - t_prev) * qd[mask]
 
                 # Add a waypoint to the output trajectory.
-                waypoint = numpy.empty(cspec.GetDOF())
+                waypoint = np.empty(cspec.GetDOF())
                 cspec.InsertDeltaTime(waypoint, t_curr - t_prev)
                 cspec.InsertJointValues(waypoint, q_curr, robot, dof_indices,
                                         0)
@@ -226,8 +224,8 @@ class MoveHandAction(Action):
             name=name, precondition=precondition, postcondition=postcondition)
 
         self._hand = to_key(hand)
-        self.dof_values = numpy.array(dof_values, dtype='float')
-        self.dof_indices = numpy.array(dof_indices, dtype='int')
+        self.dof_values = np.array(dof_values, dtype='float')
+        self.dof_indices = np.array(dof_indices, dtype='int')
 
     def get_hand(self, env):
         """
@@ -313,7 +311,6 @@ class GrabObjectSolution(MoveHandSolution):
         """
         robot = self.action.get_hand(env).GetParent()
 
-        from contextlib import nested
         return nested(
             super(GrabObjectSolution, self).save(env),
             robot.CreateRobotStateSaver(Robot.SaveParameters.GrabbedBodies))
@@ -409,7 +406,6 @@ class GrabObjectAction(MoveHandAction):
         """
 
         # Add precondition posevalidator
-        from validators.PoseValidator import ObjectPoseValidator
         obj = from_key(env, self._obj)
         obj_pose_validator = ObjectPoseValidator(obj.GetName(),
                                                  obj.GetTransform())
@@ -444,7 +440,6 @@ class ReleaseObjectsSolution(MoveHandSolution):
         """
         robot = self.action.get_hand(env).GetParent()
 
-        from contextlib import nested
         return nested(
             super(ReleaseObjectsSolution, self).save(env),
             robot.CreateRobotStateSaver(Robot.SaveParameters.GrabbedBodies))

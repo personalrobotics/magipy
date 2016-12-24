@@ -1,5 +1,8 @@
 from abc import ABCMeta, abstractmethod
 import logging
+
+from openravepy import KinBody, Robot
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
@@ -288,8 +291,6 @@ def to_key(obj):
     @param obj: object in an OpenRAVE environment
     @return tuple that uniquely identifies the object
     """
-    from openravepy import KinBody, Robot
-
     if obj is None:
         return None
     elif isinstance(obj, (KinBody, Robot)):
@@ -314,8 +315,6 @@ def from_key(env, key):
     @param key: tuple that uniquely identifies the object
     @return object in the input OpenRAVE environment
     """
-    from openravepy import KinBody, Robot
-
     if key is None:
         return None
 

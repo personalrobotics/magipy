@@ -1,10 +1,14 @@
-from .base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
-from .Plan import PlanExecutableSolution
+from contextlib import nested
+import logging
+import numpy as np
+
 from openravepy import Robot, KinBody
 from prpy.planning import PlanningError
-from prpy.util import CopyTrajectory
+from prpy.planning.base import Tags
+from prpy.util import CopyTrajectory, GetTrajectoryTags
 
-import logging
+from magi.actions.base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -35,8 +39,7 @@ class PushObjectExecutableSolution(ExecutableSolution):
         manipulator = self.action.get_manipulator(env)
 
         # Put the object in the hand
-        import numpy
-        obj_pose = numpy.dot(manipulator.GetEndEffectorTransform(),
+        obj_pose = np.dot(manipulator.GetEndEffectorTransform(),
                              self.solution.obj_in_hand_pose)
         with env:
             obj.SetTransform(obj_pose)
@@ -80,7 +83,6 @@ class PushObjectSolution(Solution):
         Save the pose of the robot and the object we are pushing
         @param env The OpenRAVE environment
         """
-        from contextlib import nested
         return nested(
             self.action.get_robot(env).CreateRobotStateSaver(
                 Robot.SaveParameters.LinkTransformation),
@@ -96,8 +98,6 @@ class PushObjectSolution(Solution):
         if self.path is None:
             return
 
-        import numpy
-
         robot = self.action.get_robot(env)
         obj = self.action.get_object(env)
         manipulator = self.action.get_manipulator(env)
@@ -112,7 +112,7 @@ class PushObjectSolution(Solution):
             robot.SetActiveDOFValues(lastconfig)
 
             with env:
-                obj_pose = numpy.dot(manipulator.GetEndEffectorTransform(),
+                obj_pose = np.dot(manipulator.GetEndEffectorTransform(),
                                      self.obj_in_hand_pose)
 
             obj.SetTransform(obj_pose)
@@ -214,9 +214,6 @@ class PushObjectAction(Action):
         Plan a straight line pushing trajectory.
         @param env The OpenRAVE environment
         """
-        from prpy.rave import AllDisabled
-        import numpy
-
         obj = self.get_object(env)
         manipulator = self.get_manipulator(env)
         robot = self.get_robot(env)
@@ -240,8 +237,8 @@ class PushObjectAction(Action):
             robot.Grab(obj)
 
             # Save the pose of the object relative to the end-effector
-            obj_in_hand = numpy.dot(
-                numpy.linalg.inv(manipulator.GetEndEffectorTransform()),
+            obj_in_hand = np.dot(
+                np.linalg.inv(manipulator.GetEndEffectorTransform()),
                 obj.GetTransform())
 
             try:
@@ -252,8 +249,6 @@ class PushObjectAction(Action):
                     **self.kwargs)
 
                 # Mark this action as deterministic based on the traj tags
-                from prpy.util import GetTrajectoryTags
-                from prpy.planning.base import Tags
                 path_tags = GetTrajectoryTags(path)
                 deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT,
                                               None)

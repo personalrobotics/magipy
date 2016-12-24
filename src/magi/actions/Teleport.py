@@ -1,5 +1,6 @@
-from .base import Action, ExecutableSolution, Solution, from_key, to_key
-from openravepy import Robot, KinBody
+from openravepy import KinBody
+
+from magi.actions.base import Action, ExecutableSolution, Solution, from_key, to_key
 
 
 class TeleportSolution(Solution, ExecutableSolution):

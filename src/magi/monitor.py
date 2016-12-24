@@ -1,6 +1,10 @@
-import pylab, threading
-import matplotlib.pyplot as plt
+from Queue import Queue
+import threading
 
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import pylab
 
 def get_action_name(action):
     action_name = action.get_name()
@@ -64,7 +68,6 @@ class ActionMonitor(object):
 
         # Create an internal queue to be used by the internal
         # draw and upate thread
-        from Queue import Queue
         self.update_request_queue = Queue()
 
         # Setup internal data structures
@@ -115,7 +118,6 @@ class ActionMonitor(object):
             self.active_actions = []
 
             # Initialize a graph for the action ordering
-            import networkx as nx
             self.G = nx.DiGraph(format='svg')
         finally:
             self.lock.release()
@@ -145,13 +147,11 @@ class ActionMonitor(object):
         # Clear the existing axis
         self.ax_bar.cla()
 
-        import numpy
         categories = self.planned_actions
         if len(categories) == 0:
             return
 
         # Build a set of nodes with a custom layout
-        import networkx as nx
         G = nx.Graph()
         node_pos = {}
         label_map = {}
@@ -219,13 +219,12 @@ class ActionMonitor(object):
         def compute_failures(results):
             return len(results) - compute_success(results)
 
-        import numpy
         categories = self.planned_actions
         if len(categories) == 0:
             return
 
         bar_height = 1.0
-        category_positions = numpy.arange(
+        category_positions = np.arange(
             bar_height * 1.5, 1.5 * bar_height * len(categories) + 0.1,
             1.5 * bar_height)
 
@@ -375,7 +374,6 @@ class ActionMonitor(object):
             for a in nodelist
         ]
 
-        import networkx as nx
         root_nodes = [n for n in self.G.nodes() if self.G.in_degree(n) == 0]
 
         node_pos = dict()

@@ -1,5 +1,9 @@
-from .base import Action, ExecutableSolution, Solution
+from contextlib import nested
 import logging
+
+from magi.actions.base import Action, ExecutableSolution, Solution
+from magi.actions.validate import SequenceValidator
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -44,7 +48,6 @@ class SequenceSolution(Solution):
         @param env The OpenRAVe environment
         @return A set of context managers, one for each solution, that must be applied in order
         """
-        from contextlib import nested
         return nested(
             *[solution.save_and_jump(env) for solution in self.solutions])
 
@@ -99,7 +102,6 @@ class SequenceAction(Action):
 
         self.actions = actions
 
-        from validate import SequenceValidator
         if len(self.actions) > 0:
             if precondition:
                 self.precondition = SequenceValidator(

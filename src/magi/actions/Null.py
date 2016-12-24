@@ -1,7 +1,6 @@
-from .base import Action, ActionError, Solution, ExecutableSolution
-import logging
-
 from contextlib import contextmanager
+
+from magi.actions.base import Action, Solution, ExecutableSolution
 
 
 @contextmanager

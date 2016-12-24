@@ -1,5 +1,9 @@
-from .base import Action, ActionError
 import logging
+import random
+
+from magi.actions.Null import NullAction
+from magi.actions.base import Action, ActionError
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -25,7 +29,6 @@ class ParallelAction(Action):
             raise ActionError(
                 "The ParallelAction contains no actions to select from")
 
-        import random
         idx = random.randint(0, num_actions - 1)
 
         return self.actions[idx].plan(env)
@@ -37,6 +40,5 @@ class OptionalAction(ParallelAction):
         @param action An action that may not be required
         @param name The name fo the action
         """
-        from Null import NullAction
         actions = [NullAction(), action]
         super(OptionalAction, self).__init__(actions, name=name)

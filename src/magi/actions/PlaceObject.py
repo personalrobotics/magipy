@@ -1,5 +1,5 @@
-from .base import from_key, to_key
-from .Plan import PlanAction
+from magi.actions.Plan import PlanAction
+from magi.actions.base import from_key, to_key
 
 
 class PlaceObjectAction(PlanAction):

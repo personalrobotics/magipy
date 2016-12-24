@@ -1,8 +1,15 @@
 #!/usr/bin/env python
-from ..validate import Validator
-from ..base import to_key, from_key, ValidationError
 
+import csv
 import logging
+
+import numpy as np
+from scipy.linalg import norm
+from sklearn import svm
+
+from magi.actions.base import to_key, from_key, ValidationError
+from magi.actions.validate import Validator
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -16,9 +23,6 @@ class GraspValidator(Validator):
         @param dof_indices The dof indices to validate
         """
         super(GraspValidator, self).__init__(name=name)
-
-        import csv, numpy
-        from sklearn import svm
 
         data = []
         # Read in the csv file
@@ -41,7 +45,7 @@ class GraspValidator(Validator):
             row[:-1] = [float(v) for v in row[:-1]]
 
         # Now build the classifier
-        self.data = numpy.array(data)
+        self.data = np.array(data)
         self.X = self.data[:, :-2]
         self.y = self.data[:, -1]
 
@@ -80,7 +84,6 @@ class GraspMeanValidator(Validator):
         with (simulated) success dof values
         """
         super(GraspMeanValidator, self).__init__(name=name)
-        import numpy as np
 
         if object_type == 'glass':
             self.mean = np.array([1.22, 1.16, 1.2])
@@ -91,7 +94,7 @@ class GraspMeanValidator(Validator):
         else:
             raise ValueError('object type not one of (glass, bowl, plate)')
 
-        # may need to be calibrated (or different value per object),
+        # May need to be calibrated (or different value per object),
         # but this seems to work for now.
         self.max = 1.0
 
@@ -99,9 +102,6 @@ class GraspMeanValidator(Validator):
         """
         @throws An ValidationError if the grasp is not valid
         """
-        import numpy as np
-        from scipy.linalg import norm
-
         difference = norm(self.mean - np.array(dof_values))
         LOGGER.info('GraspMeanValidator - validating grasp: "%s"',
                     str(difference <= self.max))

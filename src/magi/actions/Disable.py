@@ -1,5 +1,6 @@
-from .base import Action, Solution, ExecutableSolution, to_key, from_key
 from prpy.rave import AllDisabled
+
+from magi.actions.base import Action, Solution, ExecutableSolution, to_key, from_key
 
 
 class DisableExecutableSolution(ExecutableSolution):

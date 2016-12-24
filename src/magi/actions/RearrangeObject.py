@@ -1,5 +1,22 @@
-from .base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
+from contextlib import nested
 import logging
+
+import numpy as np
+
+from openravepy import Robot, KinBody
+from prpy.planning import PlanningError
+from prpy.planning.base import Tags
+from prpy.util import ComputeEnabledAABB, CopyTrajectory, GetTrajectoryTags, SetTrajectoryTags, Timer
+
+from magi.actions.base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
+
+try:
+    from or_pushing.discrete_search_push_planner import DiscreteSearchPushPlanner
+    from or_pushing.push_planner_module import PushPlannerModule
+    HAS_RANDOMIZED_REARRANGEMENT_PLANNING = True
+except ImportError:
+    HAS_RANDOMIZED_REARRANGEMENT_PLANNING = False
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -24,25 +41,25 @@ class RearrangeObjectExecutableSolution(ExecutableSolution):
         """
         # TODO: Assert the action is of type RearrangeAction
 
+        if not HAS_RANDOMIZED_REARRANGEMENT_PLANNING:
+            raise ActionError(
+                "Unable to import or_pushing. Is the randomized_rearrangement_planning"
+                "repository checked out in your workspace?")
+
         robot = self.action.get_robot(env)
         manip = self.action.get_manipulator(env)
         planner_kwargs = self.action.get_planner_kwargs()
         ompl_path = self.action.get_planned_path()
 
-        from prpy.util import CopyTrajectory, Timer, SetTrajectoryTags
         traj_copy = CopyTrajectory(self.traj, env=env)
 
-        from openravepy import Robot
         with robot.CreateRobotStateSaver(
             Robot.SaveParameters.ActiveManipulator):
             robot.SetActiveManipulator(manip)
 
-            from or_pushing.push_planner_module import PushPlannerModule
             module = PushPlannerModule(env, robot)
             module.Initialize(**planner_kwargs)
 
-        from prpy.util import Timer, SetTrajectoryTags
-        from prpy.planning.base import Tags
         if not simulate:
             # Execute the trajectory
             with Timer() as timer:
@@ -84,8 +101,6 @@ class RearrangeObjectSolution(Solution):
         movable_objects = self.action.get_movables(env)
         pushed_obj = self.action.get_pushed_object(env)
 
-        from contextlib import nested
-        from openravepy import Robot, KinBody
         savers = [
             robot.CreateRobotStateSaver(
                 Robot.SaveParameters.LinkTransformation)
@@ -106,11 +121,15 @@ class RearrangeObjectSolution(Solution):
         Move the manipulator and objects to their poses
         at the end of the pushing trajectory
         """
+        if not HAS_RANDOMIZED_REARRANGEMENT_PLANNING:
+            raise ActionError(
+                "Unable to import or_pushing. Is the randomized_rearrangement_planning"
+                "repository checked out in your workspace?")
+
         robot = self.action.get_robot(env)
         planner_kwargs = self.action.get_planner_kwargs()
         ompl_path = self.action.get_planned_path()
 
-        from or_pushing.push_planner_module import PushPlannerModule
         module = PushPlannerModule(env, robot)
         module.Initialize(**planner_kwargs)
         module.SetFinalObjectPoses(ompl_path)
@@ -194,14 +213,9 @@ class RearrangeObjectAction(Action):
         Plan to rearrange objects
         @param env The OpenRAVE environment
         """
-        import numpy
-
-        try:
-            from or_pushing.discrete_search_push_planner import DiscreteSearchPushPlanner
-            planner = DiscreteSearchPushPlanner(env)
-        except ImportError:
+        if not HAS_RANDOMIZED_REARRANGEMENT_PLANNING:
             raise ActionError(
-                "Unable to create PushPlanner. Is the randomized_rearrangement_planning"
+                "Unable to import or_pushing. Is the randomized_rearrangement_planning"
                 "repository checked out in your workspace?")
 
         on_obj = self.get_on_obj(env)
@@ -211,7 +225,6 @@ class RearrangeObjectAction(Action):
         obj = self.get_pushed_object(env)
 
         # Make the state bounds be at the edges of the table
-        from prpy.util import ComputeEnabledAABB
         with env:
             on_obj_aabb = ComputeEnabledAABB(on_obj)
         on_obj_pos = on_obj_aabb.pos()
@@ -219,7 +232,7 @@ class RearrangeObjectAction(Action):
         sbounds = {
             'high': [
                 on_obj_pos[0] + on_obj_extents[0],
-                on_obj_pos[1] + on_obj_extents[1], 2. * numpy.pi
+                on_obj_pos[1] + on_obj_extents[1], 2. * np.pi
             ],
             'low': [
                 on_obj_pos[0] - on_obj_extents[0],
@@ -233,7 +246,7 @@ class RearrangeObjectAction(Action):
             ee_pushing_transform = manipulator.GetTransform()
         ee_pushing_transform[:2, 3] = [0., 0.]  # ignore x,y pose
 
-        from prpy.planning import PlanningError
+        planner = DiscreteSearchPushPlanner(env)
         try:
             with robot.CreateRobotStateSaver():
                 robot.SetActiveManipulator(manipulator)
@@ -251,8 +264,6 @@ class RearrangeObjectAction(Action):
             self.planner_params = planner.GetPlannerParameters()
 
             # Mark this action as deterministic based on the traj tags
-            from prpy.util import GetTrajectoryTags
-            from prpy.planning.base import Tags
             path_tags = GetTrajectoryTags(path)
             deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
             if deterministic is None:

@@ -1,5 +1,8 @@
+from datetime import datetime
 import logging
 
+from prpy.planning.base import Tags
+from prpy.util import GetTrajectoryTags
 
 def get_logger():
     metrics_logger = logging.getLogger('planning_metrics')
@@ -8,7 +11,6 @@ def get_logger():
 
 def setup_logger():
     # Setup metrics logging
-    from datetime import datetime
     logfile = datetime.now().strftime('trial_%Y%m%d_%H%M.log')
     metrics_logger = get_logger()
     hdlr = logging.FileHandler('%s' % logfile)
@@ -27,8 +29,6 @@ def _log_data(path, action_name, header, tag, log_metadata=False):
     """
     logger = get_logger()
 
-    from prpy.util import GetTrajectoryTags
-    from prpy.planning.base import Tags
     path_tags = GetTrajectoryTags(path)
     log_data = [header, action_name, path_tags.get(tag, 'unknown')]
     if log_metadata:
@@ -45,7 +45,6 @@ def log_plan_data(path, action_name):
     @param path The trajectory after postprocessing
     @param action_name The HGPC action that generated the trajectory
     """
-    from prpy.planning.base import Tags
     _log_data(path, action_name, 'P', Tags.PLAN_TIME, log_metadata=True)
 
 
@@ -55,7 +54,6 @@ def log_postprocess_data(traj, action_name):
     @param traj The trajectory after postprocessing
     @param action_name The HGPC action that generated the trajectory
     """
-    from prpy.planning.base import Tags
     _log_data(traj, action_name, 'S', Tags.POSTPROCESS_TIME, log_metadata=True)
 
 
@@ -65,5 +63,4 @@ def log_execution_data(traj, action_name):
     @param traj The trajectory to log
     @param action_name The HGPC action that generated the trajectory
     """
-    from prpy.planning.base import Tags
     _log_data(traj, action_name, 'E', Tags.EXECUTION_TIME)

@@ -1,8 +1,14 @@
 #!/usr/bin/env python
-from ..validate import Validator
-from ..base import to_key, from_key, ValidationError
 
 import logging
+
+import numpy as np
+
+from table_clearing.perception_utils import get_obj
+
+from magi.actions.base import ValidationError
+from magi.actions.validate import Validator
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -19,8 +25,6 @@ class ObjectPoseValidator(Validator):
         """
         @throws An ValidationError if pose is not close enough
         """
-        from table_clearing.perception_utils import get_obj, PerceptionException
-
         if detector:
             LOGGER.info('Redetect before validation')
             detector.Update(env.GetRobots()[0])
@@ -28,7 +32,6 @@ class ObjectPoseValidator(Validator):
         with env:
             obj = get_obj(env, self.obj_name, first_match=True)
             obj_transform = obj.GetTransform()
-            import numpy as np
             # TODO: how close should this be?
             if not np.allclose(obj_transform, self.expected_pose):
                 raise ValidationError(
