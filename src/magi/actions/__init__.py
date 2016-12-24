@@ -7,15 +7,15 @@ from magi.actions.PushObject import PushObjectAction
 from magi.actions.Sequence import SequenceAction
 
 __all__ = [
-    CloseHandAction,
-    DisableAction,
-    GrabObjectAction,
-    MoveHandAction,
-    MoveUntilTouchAction,
-    OpenHandAction,
-    PlanAction,
-    PlanToTSRAction,
-    PushObjectAction,
-    ReleaseObjectAction,
-    SequenceAction,
+    'CloseHandAction',
+    'DisableAction',
+    'GrabObjectAction',
+    'MoveHandAction',
+    'MoveUntilTouchAction',
+    'OpenHandAction',
+    'PlanAction',
+    'PlanToTSRAction',
+    'PushObjectAction',
+    'ReleaseObjectAction',
+    'SequenceAction',
 ]
