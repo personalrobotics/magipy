@@ -1,14 +1,23 @@
-import logging, numpy, unittest
+"""Unit-testing utilities for MAGI."""
+
+import logging
+import unittest
+
+import numpy as np
+
+import openravepy
+
+from magi.actions.base import to_key, Validate
+
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
+
 def save_env(env):
     """
-    Crude implementation of serializing an environment
+    Crude implementation of serializing an environment.
     """
-    from magi.actions.base import from_key, to_key
-    import openravepy
-
     saved_env = {}
     for obj in env.GetBodies():
         obj_key = to_key(obj)
@@ -18,16 +27,17 @@ def save_env(env):
 
     return saved_env
 
+
 def equal_env(env1, env2):
     """
     Crude implementation of testing if two serialized environments
-    are equivalent
+    are equivalent.
     """
     for obj_key in env1.keys():
         if obj_key not in env2.keys():
             LOGGER.error('%s in env1 but not in env2', obj_key)
             return False
-        if not numpy.allclose(env1[obj_key]['pose'], env2[obj_key]['pose']):
+        if not np.allclose(env1[obj_key]['pose'], env2[obj_key]['pose']):
             LOGGER.error('%s: pose do not match', str(obj_key))
             LOGGER.info('env1 pose: %s', str(env1[obj_key]['pose']))
             LOGGER.info('env2 pose: %s', str(env2[obj_key]['pose']))
@@ -37,18 +47,20 @@ def equal_env(env1, env2):
             LOGGER.error('%s: only one environment contains dof_values for the object', obj_key)
             return False
         if 'dof_values' in env1[obj_key]:
-            if not numpy.allclose(env1[obj_key]['dof_values'], env2[obj_key]['dof_values']):
+            if not np.allclose(env1[obj_key]['dof_values'], env2[obj_key]['dof_values']):
                 LOGGER.error('%s: dof_values do not match', str(obj_key))
                 LOGGER.info('env1 dof_values: %s', str(env1[obj_key]['dof_values']))
                 LOGGER.info('env2 dof_values: %s', str(env2[obj_key]['dof_values']))
                 return False
     return True
 
+
 class MAGITest(unittest.TestCase):
+    """Base class for MAGI test cases."""
+
     is_setup = False
 
     def setUp(self):
-        import openravepy
         if not self.is_setup:
             openravepy.RaveInitialize(True)
             openravepy.misc.InitOpenRAVELogging()
@@ -60,7 +72,7 @@ class MAGITest(unittest.TestCase):
     def _action_helper(self, action, validate=False, detector=None):
         """
         Test planning, postprocessing and execution of an action.
-        Test save and jump to ensure they are properly restoring the environment
+        Test save and jump to ensure they are properly restoring the environment.
         """
         self.assertTrue(action is not None)
 
@@ -84,7 +96,6 @@ class MAGITest(unittest.TestCase):
         # post process and execute
         executable_solution = solution.postprocess(self.env)
         if validate:
-            from magi.actions.base import Validate
             with Validate(self.env, executable_solution.precondition,
                           executable_solution.postcondition, detector):
                 executable_solution.execute(self.env, simulate=True)
