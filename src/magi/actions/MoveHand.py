@@ -247,38 +247,32 @@ class MoveHandAction(Action):
             dof_indices=self.dof_indices)
 
 
-def close_hand_action(hand, name=None):
+class CloseHandAction(MoveHandAction):
     """
-    Helper function that returns a MoveHandAction that closes the fingers
+    Helper subclass of MoveHandAction that closes the fingers
     @param hand The hand to close
-    @param name The name of the action - if None the name defaults
-    to close_hand_action
+    @param name The name of the action - defaults to CloseHandAction
     """
-    if name is None:
-        name = 'close_hand_action'
-
-    return MoveHandAction(
-        name=name,
-        hand=hand,
-        dof_indices=hand.GetIndices()[0:3],
-        dof_values=[2.4, 2.4, 2.4])
+    def __init__(self, hand, name='CloseHandAction'):
+        super(CloseHandAction, self).__init__(
+            hand=hand,
+            dof_values=[2.4, 2.4, 2.4],
+            dof_indices=hand.GetIndices()[0:3],
+            name=name)
 
 
-def open_hand_action(hand, name=None):
+class OpenHandAction(MoveHandAction):
     """
-    Helper function that returns a MoveHandAction that opens the fingers completely
+    Helper subclass of MoveHandAction that opens the fingers completely
     @param hand The hand to open
-    @param name The name of the action - if None the name defaults to
-    open_hand_action
+    @param name The name of the action - defaults to OpenHandAction
     """
-    if name is None:
-        name = 'open_hand_action'
-
-    return MoveHandAction(
-        name=name,
-        hand=hand,
-        dof_indices=hand.GetIndices()[0:3],
-        dof_values=[0., 0., 0.])
+    def __init__(self, hand, name='OpenHandAction'):
+        super(OpenHandAction, self).__init__(
+            hand=hand,
+            dof_values=[0.0, 0.0, 0.0],
+            dof_indices=hand.GetIndices()[0:3],
+            name=name)
 
 
 class GrabObjectSolution(MoveHandSolution):
