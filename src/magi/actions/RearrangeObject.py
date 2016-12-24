@@ -6,7 +6,8 @@ import numpy as np
 from openravepy import Robot, KinBody
 from prpy.planning import PlanningError
 from prpy.planning.base import Tags
-from prpy.util import ComputeEnabledAABB, CopyTrajectory, GetTrajectoryTags, SetTrajectoryTags, Timer
+from prpy.util import (ComputeEnabledAABB, CopyTrajectory, GetTrajectoryTags, SetTrajectoryTags,
+                       Timer)
 
 from magi.actions.base import Action, ActionError, ExecutableSolution, Solution, from_key, to_key
 

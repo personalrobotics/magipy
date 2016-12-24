@@ -2,7 +2,8 @@ from contextlib import nested
 
 import numpy as np
 
-from openravepy import CollisionAction, CollisionOptions, CollisionOptionsStateSaver, CollisionReport, RaveCreateTrajectory, Robot
+from openravepy import (CollisionAction, CollisionOptions, CollisionOptionsStateSaver,
+                        CollisionReport, RaveCreateTrajectory, Robot)
 
 from magi.actions.base import Action, ExecutableSolution, Solution, from_key, to_key
 from magi.actions.validators.PoseValidator import ObjectPoseValidator

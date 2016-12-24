@@ -332,8 +332,8 @@ class DepthFirstPlanner(Planner):
                                     else:
                                         # If this is a checkpoint we cant backtrack past here
                                         raise CheckpointError(
-                                            'Planning failed after checkpoint %s.'.
-                                            format(action.get_name()))
+                                            'Planning failed after checkpoint {!s}.'.format(
+                                                action.get_name()))
                                 else:
                                     # If we need to backtrack, pop off this action
                                     # and solution from the stack
@@ -368,7 +368,7 @@ class DepthFirstPlanner(Planner):
                 i, num_attempts, action.get_name())
 
         raise ActionError(
-            'Planning failed in all {:d} attempts for action %s.'.format(
+            'Planning failed in all {:d} attempts for action {!s}.'.format(
                 num_attempts, action.get_name()),
             deterministic=deterministic)
 
