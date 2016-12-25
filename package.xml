@@ -8,6 +8,12 @@
   <url type="repository">https://github.com/personalrobotics/magi</url>
   <maintainer email="gilwool@cs.cmu.edu">Gilwoo Lee</maintainer>
   <author email="gilwool@cs.cmu.edu">Gilwoo Lee</author>
+  <author email="jeking@cs.cmu.edu">Jennifer King</author>
+  <author email="amj1@cmu.edu">Aaron Johnson</author>
+  <author email="shushmac@andrew.cmu.edu">Shushman Choudhury</author>
+  <author email="mkoval@cs.cmu.edu">Michael Koval</author>
+  <author email="mharding@andrew.cmu.edu">Matteo Harding</author>
+  <author email="bhou@cs.cmu.edu">Brian Hou</author>
   <license>unreleased</license>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>atlas</build_depend>
