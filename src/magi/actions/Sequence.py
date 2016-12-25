@@ -1,7 +1,7 @@
 from contextlib import nested
 import logging
 
-from magi.actions.base import Action, ExecutableSolution, Solution
+from magi.actions.base import Action, ExecutableSolution, ExecutionError, Solution
 from magi.actions.validate import SequenceValidator
 
 LOGGER = logging.getLogger(__name__)
