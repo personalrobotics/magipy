@@ -12,9 +12,6 @@ import prpy
 from magi.actions.MoveHand import MoveHandAction
 from magi_test_helper import MAGITest
 
-# Is this path manipulation necessary? The current directory should already be on the path.
-sys.path = [os.path.abspath(os.path.dirname(__file__))] + sys.path
-
 
 class DummyHand(EndEffector):
     """Dummy EndEffector that jumps directly to the given DOF values."""
@@ -23,7 +20,7 @@ class DummyHand(EndEffector):
         EndEffector.__init__(self, manipulator)
         self.dofs = [0.0]
 
-    def move_hand(self, *dofs):
+    def MoveHand(self, *dofs, **kwargs):
         """Jump directly to DOFs."""
         dof_values = self.GetDOFValues()
         for idx, dofval in enumerate(dofs):
