@@ -1,3 +1,7 @@
+"""
+Utility functions.
+"""
+
 import numpy as np
 
 from openravepy import RaveCreateTrajectory, Robot
@@ -6,12 +10,12 @@ from prpy.util import ComputeUnitTiming, GetCollisionCheckPts, IsTimedTrajectory
 def get_feasible_path(robot, path):
     """
     Check a path for feasibility (collision) and return a truncated path
-    containing the  path only up to just before the first collision.
+    containing the path only up to just before the first collision.
 
-    @param robot The OpenRAVE robot
-    @param path The path to check for feasiblity
-    @return A tuple with the (possibly) truncated path,
-    and a boolean indicating whether or not collision was detected
+    @param robot: the OpenRAVE robot
+    @param path: the path to check for feasiblity
+    @return tuple with the (possibly) truncated path, and a boolean indicating
+      whether or not path was truncated
     """
     env = robot.GetEnv()
     path_cspec = path.GetConfigurationSpecification()
