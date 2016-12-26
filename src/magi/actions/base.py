@@ -1,3 +1,5 @@
+"""Base classes, context managers, and exceptions for MAGI actions."""
+
 from abc import ABCMeta, abstractmethod
 import logging
 
@@ -8,17 +10,22 @@ LOGGER.setLevel(logging.INFO)
 
 
 class SaveAndJump(object):
+    """
+    Save the state of the environment and jump the environment to the result of
+    a solution when entering. Jump back to the original state when exiting.
+    """
+
     def __init__(self, solution, env):
         """
-        @param solution A solution object
-        @param env The environment to call save and jump on
+        @param solution: a Solution object
+        @param env: the OpenRAVE environment to call save and jump on
         """
         self.solution = solution
         self.env = env
 
     def __enter__(self):
         """
-        First call save on the solution, then jump
+        First call save on the solution, then jump.
         """
         LOGGER.debug('Begin SaveAndJump: %s', self.solution.action.get_name())
         self.cm = self.solution.save(self.env)
@@ -26,39 +33,50 @@ class SaveAndJump(object):
         self.solution.jump(self.env)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """
-        Exit the context manager created by calling the save function on entrance
-        to this context manager
-        """
+        """Exit the context manager created when this context manager was entered."""
         LOGGER.debug('End SaveAndJump: %s', (self.solution.action.get_name()))
         retval = self.cm.__exit__(exc_type, exc_value, traceback)
         return retval
 
 
 class Validate(object):
+    """
+    Check a precondition when entering and a postcondition when exiting.
+    """
+
     def __init__(self,
                  env,
                  precondition=None,
                  postcondition=None,
                  detector=None):
+        """
+        @param env: OpenRAVE environment
+        @param precondition: Validator that validates preconditions
+        @param postcondition: Validator that validates postconditions
+        @param detector: object detector (implements DetectObjects, Update)
+        """
         self.env = env
         self.precondition = precondition
         self.postcondition = postcondition
         self.detector = detector
 
     def __enter__(self):
+        """Validate precondition."""
         LOGGER.info('Validate precondition: %s', self.precondition)
         if self.precondition is not None:
             self.precondition.validate(self.env, self.detector)
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """Validate postcondition."""
         LOGGER.info('Validate postcondition: %s', self.postcondition)
         if self.postcondition is not None:
             self.postcondition.validate(self.env, self.detector)
 
 
 class ActionError(Exception):
-    KNOWN_KWARGS = set(['deterministic'])
+    """Base exception class for actions."""
+
+    KNOWN_KWARGS = {'deterministic'}
 
     def __init__(self, *args, **kwargs):
         super(ActionError, self).__init__(*args)
@@ -68,22 +86,30 @@ class ActionError(Exception):
 
 
 class CheckpointError(ActionError):
+    """Exception class for checkpoints."""
+
     pass
 
 
 class ExecutionError(Exception):
+    """Exception class for executing solutions."""
+
     def __init__(self, message='', solution=None):
         super(ExecutionError, self).__init__(message)
         self.failed_solution = solution
 
 
 class ValidationError(Exception):
+    """Exception class for validating solutions."""
+
     def __init__(self, message='', validator=None):
         super(ValidationError, self).__init__(message)
         self.failed_validator = validator
 
 
 class Action(object):
+    """Abstract base class for actions."""
+
     __metaclass__ = ABCMeta
 
     def __init__(self,
@@ -92,12 +118,12 @@ class Action(object):
                  postcondition=None,
                  checkpoint=False):
         """
-        @param name The name of the action
-        @param precondition Validator that validates preconditions
-        @param postcondition Validator that validates postconditions
-        @param checkpoint True if this action is a checkpoint - once a Solution
-        is achieved neither the plan method of this action nor any of its predecessors
-        will be called again
+        @param name: name of the action
+        @param precondition: Validator that validates preconditions
+        @param postcondition: Validator that validates postconditions
+        @param checkpoint: True if this action is a checkpoint - once a Solution
+          is achieved, neither the plan method of this action nor any of its
+          predecessors will be called again
         """
         self._name = name
         self.precondition = precondition
@@ -105,6 +131,9 @@ class Action(object):
         self.checkpoint = checkpoint
 
     def get_name(self):
+        """
+        Return the name of the action.
+        """
         return self._name
 
     @abstractmethod
@@ -112,9 +141,9 @@ class Action(object):
         """
         Return a Solution that realizes this action.
 
-        This method attempts to realize this action in the input environment,
-        if possible.  It MUST restore the environment to its original state
-        before returning. If successful, this method returns a Solution object.
+        This method attempts to realize this action in the input environment, if
+        possible. It MUST restore the environment to its original state before
+        returning. If successful, this method returns a Solution object.
         Otherwise, it raises an ActionError.
 
         The implementation of this method MAY be stochastic. If so, the method
@@ -122,8 +151,8 @@ class Action(object):
 
         The environment MUST be locked when calling this method.
 
-        Ideally, planners should "with Validate(env, self.precondition)"
-        when calling this.
+        Ideally, planners should "with Validate(env, self.precondition)" when
+        calling this.
 
         @param env: OpenRAVE environment
         @return Solution object
@@ -139,10 +168,9 @@ class Action(object):
         The environment MUST NOT be locked while calling this method.
 
         @param env: OpenRAVE environment
-        @param simulated: flag to run in simulation
+        @param simulate: flag to run in simulation
         @return result of executing the action
         """
-
         with env:
             solution = self.plan(env)
             executable_solution = solution.postprocess(env)
@@ -151,6 +179,8 @@ class Action(object):
 
 
 class Solution(object):
+    """Abstract base class for solutions."""
+
     __metaclass__ = ABCMeta
 
     def __init__(self,
@@ -159,13 +189,13 @@ class Solution(object):
                  precondition=None,
                  postcondition=None):
         """
-        @param deterministic True if calling the plan method on the action
-        multiple times will give the exact same solution
-
-        @param precondition Validator. Can be more specific than
-                            action's precondition.
-        @param postcondition Validator. Can be more specific than
-                             action's postcondition.
+        @param action: the action that this Solution realizes
+        @param deterministic: True if calling the plan method on the action
+          multiple times will give the exact same solution
+        @param precondition: Validator. Can be more specific than action's
+          precondition.
+        @param postcondition: Validator. Can be more specific than action's
+          postcondition.
         """
         self.action = action
         self.deterministic = deterministic
@@ -177,13 +207,12 @@ class Solution(object):
         Return a context manager that preserves the state of the environmnet
         then jumps the environment to the result of this solution.
 
-        This context manager MUST restore the environment to its
-        original state before returning.
+        This context manager MUST restore the environment to its original state
+        before returning.
 
         @param env: OpenRAVE environment
         @return context manager
         """
-
         return SaveAndJump(self, env)
 
     @abstractmethod
@@ -247,10 +276,9 @@ class Solution(object):
         The environment MUST NOT be locked while calling this method.
 
         @param env: OpenRAVE environment
-        @param simulated: flag to run in simulation
+        @param simulate: flag to run in simulation
         @return result of executing the solution
         """
-
         with env:
             executable_solution = self.postprocess(env)
 
@@ -258,6 +286,8 @@ class Solution(object):
 
 
 class ExecutableSolution(object):
+    """Abstract base class for executing post-processed solutions."""
+
     __metaclass__ = ABCMeta
 
     def __init__(self, solution):
@@ -275,7 +305,7 @@ class ExecutableSolution(object):
         The environment MUST NOT be locked while calling this method.
 
         @param env: OpenRAVE environment
-        @param simulated: flag to run in simulation
+        @param simulate: flag to run in simulation
         @return result of executing the solution
         """
         pass
@@ -300,7 +330,7 @@ def to_key(obj):
     elif isinstance(obj, Robot.Manipulator):
         key = obj.GetRobot().GetName(), obj.GetName()
     else:
-        raise TypeError('Unknown type "{:s}".'.format(str(type(obj))))
+        raise TypeError('Unknown type "{!s}".'.format(type(obj)))
 
     return (type(obj), ) + key
 
@@ -329,4 +359,4 @@ def from_key(env, key):
     elif issubclass(obj_type, Robot.Manipulator):
         return env.GetRobot(key[1]).GetManipulator(key[2])
     else:
-        raise TypeError('Unknown type "{:s}".'.format(str(obj_type)))
+        raise TypeError('Unknown type "{!s}".'.format(obj_type))
