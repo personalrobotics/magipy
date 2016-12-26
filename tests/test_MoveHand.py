@@ -2,8 +2,6 @@
 
 """Tests for magi.actions.MoveHand."""
 
-import os.path
-import sys
 import unittest
 
 from prpy.base.endeffector import EndEffector
