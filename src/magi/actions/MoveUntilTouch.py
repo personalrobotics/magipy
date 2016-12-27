@@ -40,6 +40,8 @@ class MoveUntilTouchExecutableSolution(ExecutableSolution):
     def action(self):
         """
         Return the solution's Action.
+
+        @return MoveUntilTouchAction
         """
         return self.solution.action
 

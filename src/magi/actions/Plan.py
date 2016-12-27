@@ -32,6 +32,8 @@ class PlanExecutableSolution(ExecutableSolution):
     def action(self):
         """
         Return the solution's Action.
+
+        @return PlanSolution
         """
         return self.solution.action
 

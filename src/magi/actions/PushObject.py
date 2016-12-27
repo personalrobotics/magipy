@@ -33,6 +33,8 @@ class PushObjectExecutableSolution(ExecutableSolution):
     def action(self):
         """
         Return the solution's Action.
+
+        @return PushObjectAction
         """
         return self.solution.action
 
@@ -162,16 +164,16 @@ class PushObjectAction(Action):
                  args=None,
                  kwargs=None):
         """
-        @param manipulator The manipulator to use to push the object
-        @param obj The object being pushed
-        @param push_distance The distance to push the object
-        @param required If True, and a plan cannot be found, raise an ActionError. If False,
-        and a plan cannot be found, return an empty solution so execution can proceed normally.
-        @param name The name of the action
-        @param args Additional arguments to be passed
-        to the planner generating the pushing trajectory
-        @param kwargs Additional keyword arguments to be passed
-        to the planner generating the pushing trajectory
+        @param manipulator: OpenRAVE manipulator to use to push the object
+        @param obj: object being pushed
+        @param push_distance: distance to push the object
+        @param required: if True, and a plan cannot be found, raise an
+          ActionError. If False, and a plan cannot be found, return an empty
+          solution so execution can proceed normally.
+        @param name: name of the action
+        @param args: additional arguments to pass to PlanToEndEffectorOffset
+        @param kwargs: additional keyword arguments to pass to
+          PlanToEndEffectorOffset
         """
         super(PushObjectAction, self).__init__(name=name)
         self._manipulator = to_key(manipulator)
