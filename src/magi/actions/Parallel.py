@@ -1,3 +1,7 @@
+"""
+Define ParallelAction and OptionalAction.
+"""
+
 import logging
 import random
 
@@ -8,11 +12,15 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ParallelAction(Action):
+    """
+    A meta-Action that takes a list of actions, any one of which could succeed
+    to consider this Action a success.
+    """
+
     def __init__(self, actions, name=None):
         """
-        @param actions A list of actions, any one of which could succeed to consider this
-          Action a success
-        @param name The name of the action
+        @param actions: list of Actions
+        @param name: name of the action
         """
         super(ParallelAction, self).__init__(name=name)
 
@@ -20,25 +28,27 @@ class ParallelAction(Action):
 
     def plan(self, env):
         """
-        Randomly select and plan an action from the actions list
-        and plans the action.
+        Randomly select and plan an action from the actions list.
+
+        @param env: OpenRAVE environment
+        @return Solution to a randomly selected Action
         """
-
-        num_actions = len(self.actions)
-        if num_actions == 0:
+        if not self.actions:
             raise ActionError(
-                "The ParallelAction contains no actions to select from")
-
-        idx = random.randint(0, num_actions - 1)
-
-        return self.actions[idx].plan(env)
+                'The ParallelAction contains no actions to select from.')
+        action = random.choice(self.actions)
+        return action.plan(env)
 
 
 class OptionalAction(ParallelAction):
+    """
+    A meta-Action that takes an action that may not be required.
+    """
+
     def __init__(self, action, name=None):
         """
-        @param action An action that may not be required
-        @param name The name fo the action
+        @param action: action that may not be required
+        @param name: name of the action
         """
         actions = [NullAction(), action]
         super(OptionalAction, self).__init__(actions, name=name)
