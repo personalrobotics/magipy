@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"""Define ObjectPoseValidator."""
+
 import logging
 
 import numpy as np
@@ -13,9 +15,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ObjectPoseValidator(Validator):
+    """Validate that an object is in a pose."""
     def __init__(self, obj_name, pose, name='PoseValidator'):
         """
-        This class validates that object is in pose
+        @param obj_name: name of the object
+        @param pose: expected pose of the object
+        @param name: name of the validator
         """
         super(ObjectPoseValidator, self).__init__(name=name)
         self.obj_name = obj_name
@@ -23,7 +28,11 @@ class ObjectPoseValidator(Validator):
 
     def validate(self, env, detector=None):
         """
-        @throws An ValidationError if pose is not close enough
+        Validate an object by checking the difference from the expected pose.
+
+        @param env: OpenRAVE environment
+        @param detector: object detector (implements DetectObjects, Update)
+        @throws a ValidationError if pose is not close enough
         """
         if detector:
             LOGGER.info('Redetect before validation')
