@@ -1,5 +1,4 @@
-"""Define MAGI Actions."""
-
+"""MAGI Actions."""
 
 from magi.actions.Disable import DisableAction
 from magi.actions.MoveHand import (MoveHandAction, CloseHandAction, OpenHandAction,
