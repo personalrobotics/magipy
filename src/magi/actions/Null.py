@@ -1,3 +1,5 @@
+"""Define NullAction and NullSolution."""
+
 from contextlib import contextmanager
 
 from magi.actions.base import Action, Solution, ExecutableSolution
@@ -5,16 +7,12 @@ from magi.actions.base import Action, Solution, ExecutableSolution
 
 @contextmanager
 def empty_manager():
-    """
-    Empty context lib
-    """
+    """Empty context manager."""
     yield
 
 
 class NullSolution(Solution, ExecutableSolution):
-    """
-    A Solution and ExecutableSolution class that do nothing - simply a place holder
-    """
+    """A Solution and ExecutableSolution that does nothing."""
 
     def __init__(self, action, precondition=None, postcondition=None):
         Solution.__init__(
@@ -39,10 +37,8 @@ class NullSolution(Solution, ExecutableSolution):
 
 
 class NullAction(Action):
+    """An Action that does nothing."""
+
     def plan(self, env):
-        """
-        Does nothing. Simply returns a NullSolution
-        @param env The OpenRAVE environment
-        @return A NullSolution class.
-        """
+        """Simply returns a NullSolution."""
         return NullSolution(self)
