@@ -31,7 +31,7 @@ class MoveUntilTouchExecutableSolution(ExecutableSolution):
     def __init__(self, solution, traj):
         """
         @param solution: Solution object that generated this ExecutableSolution
-        @param traj: planned trajectory to be executed
+        @param traj: planned trajectory to execute
         """
         super(MoveUntilTouchExecutableSolution, self).__init__(solution)
         self.traj = traj
@@ -82,10 +82,11 @@ class MoveUntilTouchSolution(Solution):
 
     def save(self, env):
         """
-        Return a context manager that saves the current robot configuration.
+        Return a context manager that saves the current robot configuration
+        (LinkTransformation).
 
         @param env: OpenRAVE environment
-        @return A RobotStateSaver that saves robot configuration (LinkTransformation)
+        @return a RobotStateSaver that saves the current configuration
         """
         robot = self.action.get_manipulator(env).GetRobot()
 
