@@ -107,6 +107,7 @@ class TeleportAction(Action):
         """
         No real planning is performed; just find the new pose of the object.
 
+        @param env: OpenRAVE environment
         @return a TeleportSolution
         """
         obj = self.get_obj(env)

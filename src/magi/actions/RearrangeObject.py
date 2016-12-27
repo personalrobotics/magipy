@@ -163,6 +163,7 @@ class RearrangeObjectSolution(Solution):
         Run post-processing on the trajectory generated for the rearrangement.
         Currently does not perform any post-processing.
 
+        @param env: OpenRAVE environment
         @return RearrangeObjectExecutableSolution
         """
         # TODO: PostProcessPath?

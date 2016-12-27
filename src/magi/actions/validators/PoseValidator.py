@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 class ObjectPoseValidator(Validator):
     """Validate that an object is in a pose."""
+
     def __init__(self, obj_name, pose, name='PoseValidator'):
         """
         @param obj_name: name of the object

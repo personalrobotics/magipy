@@ -133,6 +133,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
         @param robot: OpenRAVE robot
         @param q_goal: goal configuration (dof values)
         @param dof_indices: indices of the dofs specified in q_goal
+        @return hand trajectory
         """
         def collision_callback(report, is_physics):
             """
@@ -141,6 +142,7 @@ class MoveHandSolution(Solution, ExecutableSolution):
 
             @param report: collision report
             @param is_physics: whether collision is from physics
+            @return ignore collision action
             """
             colliding_links.update([report.plink1, report.plink2])
             return CollisionAction.Ignore
@@ -634,6 +636,7 @@ class ReleaseAllGrabbedAction(MoveHandAction):
         Look up and return the manipulator in the environment.
 
         @param env: OpenRAVE environment
+        @return a prpy.EndEffector
         """
         return from_key(env, self._manipulator)
 

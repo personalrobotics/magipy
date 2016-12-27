@@ -32,9 +32,7 @@ class Validator(object):
 
 
 class SequenceValidator(Validator):
-    """
-    Validates validators in order.
-    """
+    """Validates validators in order."""
 
     def __init__(self, validators, name='SequenceValidator'):
         """
@@ -122,9 +120,7 @@ class ValidateSolution(Solution, ExecutableSolution):
 
 
 class ValidateAction(Action):
-    """
-    Meta-action that allows an action to be validated after execution.
-    """
+    """Meta-action that allows an action to be validated after execution."""
 
     def __init__(self, validator, wrapped_action, name=None):
         """

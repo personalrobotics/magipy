@@ -142,7 +142,7 @@ class PlanAction(Action):
           planning
         @param active_manipulator: manipulator of the robot that should be
           active during planning
-        @param method: planning_method to call (e.g. 'PlanToConfiguration')
+        @param method: planning method to call (e.g. 'PlanToConfiguration')
         @param args: arguments to pass to the planning method
         @param kwargs: keyword arguments to pass to the planning method
         @param planner: specific planner to look up the planning method from

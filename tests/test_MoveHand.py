@@ -15,11 +15,19 @@ class DummyHand(EndEffector):
     """Dummy EndEffector that jumps directly to the given DOF values."""
 
     def __init__(self, manipulator):
+        """
+        @param manipulator: OpenRAVE manipulator
+        """
         EndEffector.__init__(self, manipulator)
         self.dofs = [0.0]
 
     def MoveHand(self, *dofs, **kwargs):
-        """Jump directly to DOFs."""
+        """
+        Jump directly to DOFs.
+
+        @param dofs: dof values to set
+        @param kwargs: for compatibility with BarrettHand.MoveHand
+        """
         dof_values = self.GetDOFValues()
         for idx, dofval in enumerate(dofs):
             if dofval is not None:

@@ -24,9 +24,7 @@ class SaveAndJump(object):
         self.env = env
 
     def __enter__(self):
-        """
-        First call save on the solution, then jump.
-        """
+        """First call save on the solution, then jump."""
         LOGGER.debug('Begin SaveAndJump: %s', self.solution.action.get_name())
         self.cm = self.solution.save(self.env)
         self.cm.__enter__()
@@ -40,9 +38,7 @@ class SaveAndJump(object):
 
 
 class Validate(object):
-    """
-    Check a precondition when entering and a postcondition when exiting.
-    """
+    """Check a precondition when entering and a postcondition when exiting."""
 
     def __init__(self,
                  env,
@@ -131,9 +127,7 @@ class Action(object):
         self.checkpoint = checkpoint
 
     def get_name(self):
-        """
-        Return the name of the action.
-        """
+        """Return the name of the action."""
         return self._name
 
     @abstractmethod
@@ -189,7 +183,7 @@ class Solution(object):
                  precondition=None,
                  postcondition=None):
         """
-        @param action: the action that this Solution realizes
+        @param action: Action that generated this Solution
         @param deterministic: True if calling the plan method on the action
           multiple times will give the exact same solution
         @param precondition: Validator. Can be more specific than action's
@@ -291,6 +285,9 @@ class ExecutableSolution(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, solution):
+        """
+        @param solution: Solution that generated this ExecutableSolution
+        """
         self.solution = solution
         self.precondition = solution.precondition
         self.postcondition = solution.postcondition

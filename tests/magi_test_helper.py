@@ -17,6 +17,9 @@ LOGGER.setLevel(logging.INFO)
 def save_env(env):
     """
     Crude implementation of serializing an environment.
+
+    @param env: OpenRAVE environment
+    @return a dictionary serialization of the environment
     """
     saved_env = {}
     for obj in env.GetBodies():
@@ -30,8 +33,12 @@ def save_env(env):
 
 def equal_env(env1, env2):
     """
-    Crude implementation of testing if two serialized environments
-    are equivalent.
+    Crude implementation of testing if two serialized environments are
+    equivalent.
+
+    @param env1: serialized environment
+    @param env2: serialized environment
+    @return True if the two environments are equal
     """
     for obj_key in env1.keys():
         if obj_key not in env2.keys():
@@ -73,6 +80,12 @@ class MAGITest(unittest.TestCase):
         """
         Test planning, postprocessing and execution of an action.
         Test save and jump to ensure they are properly restoring the environment.
+
+        @param action: Action to test
+        @param validate: whether to validate pre and postconditions before
+          executing
+        @param detector: object detector
+        @return Solution to the action
         """
         self.assertTrue(action is not None)
 
@@ -114,7 +127,12 @@ class MAGITest(unittest.TestCase):
 
     def _recursive_seq_test(self, actions, validate=False, detector=None):
         """
-        Test a list of actions that are part of a sequence
+        Test a list of actions that are part of a sequence.
+
+        @param actions: list of Actions to test
+        @param validate: whether to validate pre and postconditions before
+          executing
+        @param detector: object detector
         """
         if len(actions) == 0:
             return

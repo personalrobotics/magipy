@@ -37,6 +37,7 @@ class PlaceObjectAction(PlanAction):
         @param kwargs: extra keyword arguments to pass to the planner
         @param planner: specific planner to use
           if None, robot.planner is used
+        @param name: name of the action
         """
         super(PlaceObjectAction, self).__init__(
             robot,

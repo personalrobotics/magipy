@@ -236,6 +236,7 @@ class ExecutionEngine(object):
 
         @param env: postprocessing OpenRAVE environment
         @param solution: Solution to postprocess
+        @return ExecutableSolution
         """
         if self.monitor is not None:
             self.monitor.set_post_processing_action(solution.action)
@@ -291,7 +292,11 @@ def execute_pipeline(env, solution, simulate, monitor=None):
     @param monitor: ActionMonitor visualizer
     """
     def plan_callback(_, solution_queue):
-        """Simple callback that just puts the solution in the queue."""
+        """
+        Simple callback that just puts the solution in the queue.
+
+        @param solution_queue: Queue to put solutions into
+        """
         solution_queue.put(solution)
 
     engine = ExecutionEngine(simulated=simulate, monitor=monitor)
@@ -317,13 +322,23 @@ def plan_execute_pipeline(env,
     if timelimit is not None:
 
         def plan_callback(planning_env, solution_queue):
-            """Callback that uses the timed planner."""
+            """
+            Callback that uses the timed planner.
+
+            @param planning_env: OpenRAVE environment to plan with
+            @param solution_queue: Queue to put solutions into
+            """
             return planner.plan_timed(
                 planning_env, action, timelimit, output_queue=solution_queue)
     else:
 
         def plan_callback(planning_env, solution_queue):
-            """Callback that uses the untimed planner."""
+            """
+            Callback that uses the untimed planner.
+
+            @param planning_env: OpenRAVE environment to plan with
+            @param solution_queue: Queue to put solutions into
+            """
             return planner.plan_action(
                 planning_env, action, output_queue=solution_queue)
 

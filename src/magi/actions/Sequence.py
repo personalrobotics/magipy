@@ -71,7 +71,7 @@ class SequenceSolution(Solution):
         """
         Not implemented. Use save_and_jump.
         """
-        raise ExecutionError('save is unsupported for SequenceSolution')
+        raise NotImplementedError('save is unsupported for SequenceSolution')
 
     def jump(self, env):
         """

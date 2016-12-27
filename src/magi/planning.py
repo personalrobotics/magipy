@@ -19,6 +19,7 @@ LOGGER = logging.getLogger(__name__)
 
 class TimeoutException(Exception):
     """Exception class for timeouts."""
+
     pass
 
 
@@ -84,6 +85,7 @@ def _build_tree(action, G, node_map, parent_nodes=None):
     @param G: the tree
     @param node_map: map from node names in the tree to action objects
     @param parent_nodes: parents for this action
+    @return a list of nodes
     """
     if parent_nodes is None:
         parent_nodes = []
@@ -151,6 +153,7 @@ class DepthFirstPlanner(Planner):
         @param env: OpenRAVE environment
         @param action: starting Action to plan from
         @param output_queue: queue of solutions to put out when a checkpoint is reached
+        @return a SequenceSolution
         """
         self.G = nx.DiGraph(format='svg')
         _build_tree(action, self.G, self.node_map)
@@ -204,6 +207,7 @@ class DepthFirstPlanner(Planner):
         @param env: OpenRAVE environment
         @param node_ids: ids of satisfied nodes in the graph
         @param num_attempts: max number of attempts to plan
+        @return list of Solutions
         """
         monitor = self.monitor
 
@@ -411,7 +415,8 @@ class RestartPlanner(Planner):
         @param max_action_attempts: max times to attempt to plan an action at
           any particular visit to a node
         @param monitor: monitor to register planning progress to
-        @param keep_trying: continue to restart until success or timeout (if used)
+        @param keep_trying: continue to restart until success or timeout (if
+          used)
         """
         self.num_attempts = max_action_attempts
         self.monitor = monitor
@@ -429,6 +434,7 @@ class RestartPlanner(Planner):
         @param env: OpenRAVE environment
         @param action: starting Action to plan from
         @param output_queue: queue of solutions to put out when a checkpoint is reached
+        @return a SequenceSolution
         """
         if output_queue is not None:
             LOGGER.warning(
@@ -473,6 +479,7 @@ class RestartPlanner(Planner):
 
         @param env: OpenRAVE environment
         @param node_ids: ids of satisfied nodes in the graph
+        @return list of Solutions
         """
         monitor = self.monitor
 

@@ -240,6 +240,7 @@ class ActionMonitor(object):
             Compute number of Actions that succeeded.
 
             @param results: list of ActionResults
+            @return number of successes
             """
             return sum([1 if r == ActionResults.DETERMINISTIC_SUCCESS or \
                         r == ActionResults.NONDETERMINISTIC_SUCCESS \
@@ -250,6 +251,7 @@ class ActionMonitor(object):
             Compute number of Actions that failed.
 
             @param results: list of ActionResults
+            @return number of failures
             """
             return len(results) - compute_success(results)
 
@@ -529,7 +531,8 @@ class ActionMonitor(object):
 
         @param action: Action to update
         @param success: True if a plan was successfully generated for the Action
-        @param deterministic: True if the method to solve the action is deterministic
+        @param deterministic: True if the method to solve the action is
+          deterministic
         """
         self.lock.acquire()
         try:

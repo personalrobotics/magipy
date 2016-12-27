@@ -17,9 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class PushObjectExecutableSolution(ExecutableSolution):
-    """
-    An ExecutableSolution that plans a straight line pushing trajectory.
-    """
+    """An ExecutableSolution that plans a straight line pushing trajectory."""
 
     def __init__(self, solution, traj):
         """
@@ -78,9 +76,7 @@ class PushObjectExecutableSolution(ExecutableSolution):
 
 
 class PushObjectSolution(Solution):
-    """
-    A Solution that plans a straight line pushing trajectory.
-    """
+    """A Solution that plans a straight line pushing trajectory."""
 
     def __init__(self, action, path, obj_in_hand_pose, deterministic):
         """
@@ -140,7 +136,10 @@ class PushObjectSolution(Solution):
 
     def postprocess(self, env):
         """
-        Run post-processing on the trajectory generated for the push
+        Run post-processing on the trajectory generated for the push.
+
+        @param env: OpenRAVE environment
+        @return PushObjectExecutableSolution
         """
         robot = self.action.get_robot(env)
 
@@ -151,9 +150,7 @@ class PushObjectSolution(Solution):
 
 
 class PushObjectAction(Action):
-    """
-    An Action that plans a straight line pushing trajectory.
-    """
+    """An Action that plans a straight line pushing trajectory."""
 
     def __init__(self,
                  manipulator,
