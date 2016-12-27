@@ -1,19 +1,41 @@
 #!/usr/bin/env python
-import numpy, logging, time
-from magi.actions.base import ActionError, ExecutionError, ValidationError
-from magi.execution import plan_execute_pipeline, execute_pipeline, execute_serial, execute_interleaved
-from magi.planning import DepthFirstPlanner, RestartPlanner, TimeoutException
-from prpy.exceptions import TrajectoryAborted
+
+"""Demo for grasping glass."""
+
+import argparse
+import logging
+import signal
+import sys
+
+import IPython
+import numpy
+
 from prpy.rave import add_object
-from magi.actions.Plan import PlanToTSRAction
-from magi.actions.MoveHand import MoveHandAction, GrabObjectAction
-from magi.actions.Sequence import SequenceAction
+import herbpy
+import openravepy
+
 from magi.actions.Disable import DisableAction
+from magi.actions.MoveHand import MoveHandAction, GrabObjectAction
+from magi.actions.Plan import PlanToTSRAction
 from magi.actions.PushObject import PushObjectAction
+from magi.actions.Sequence import SequenceAction
+from magi.actions.base import ActionError, ExecutionError
+from magi.execution import execute_pipeline
+from magi.planning import DepthFirstPlanner, RestartPlanner
+import magi.monitor
 
 LOGGER = logging.getLogger(__name__)
 
+
 def grasp_glass_action_graph(manipulator_, glass_, table_):
+    """
+    Generate grasp glass action graph.
+
+    @param manipulator_: manipulator to grasp the glass with
+    @param glass_: glass to grasp
+    @param table_: table on which the grasp is resting
+    @return Action graph
+    """
     hand_dof, hand_values = manipulator_.hand.configurations.get_configuration('glass_grasp')
     close_dof, close_values = manipulator_.hand.configurations.get_configuration('closed')
 
@@ -57,31 +79,40 @@ def grasp_glass_action_graph(manipulator_, glass_, table_):
 
     return SequenceAction(actions, name='GraspCupAction')
 
+# OBJ_IN_FRAME transforms
+
+TABLE_IN_ROBOT = numpy.array([[0., 0., 1., 0.945],
+                              [1., 0., 0., 0.],
+                              [0., 1., 0., 0.02],
+                              [0., 0., 0., 1.]])
+
+GLASS_IN_TABLE = numpy.array([[1., 0., 0., -0.359],
+                              [0., 0., 1., 0.739],
+                              [0., -1., 0., -0.072],
+                              [0., 0., 0., 1.]])
+
 def detect_objects(robot_):
+    """
+    Return table and glass objects relative to the robot.
+    Add table and glass objects to the world.
+
+    @param robot_: OpenRAVE robot
+    @return table and glass KinBodies
+    """
     env_ = robot_.GetEnv()
     with env_:
         robot_in_world = robot_.GetTransform()
 
-    table_in_robot = numpy.array([[0., 0., 1., 0.945],
-                                  [1., 0., 0., 0.],
-                                  [0., 1., 0., 0.02],
-                                  [0., 0., 0., 1.]])
-    table_in_world = numpy.dot(robot_in_world, table_in_robot)
+    table_in_world = numpy.dot(robot_in_world, TABLE_IN_ROBOT)
     table_ = add_object(env_, 'table', 'furniture/table.kinbody.xml',
                         table_in_world)
 
-    glass_in_table = numpy.array([[1., 0., 0., -0.359],
-                                  [0., 0., 1., 0.739],
-                                  [0., -1., 0., -0.072],
-                                  [0., 0., 0., 1.]])
     glass_ = add_object(env_, 'glass', 'objects/plastic_glass.kinbody.xml',
-                        numpy.dot(table_in_world, glass_in_table))
+                        numpy.dot(table_in_world, GLASS_IN_TABLE))
     return table_, glass_
 
 
 if __name__ == "__main__":
-
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--viewer', '-v', type=str, default='interactivemarker',
                         help='The viewer to attach (none for no viewer)')
@@ -92,13 +123,11 @@ if __name__ == "__main__":
     parser.add_argument('--robot', type=str, default='herb',
                         help='Robot to run the task on')
 
-    import openravepy
     openravepy.RaveInitialize(True, level=openravepy.DebugLevel.Info)
     openravepy.misc.InitOpenRAVELogging()
 
     args = parser.parse_args()
 
-    import herbpy
     env, robot = herbpy.initialize()
 
     # Get the desired manipulator
@@ -110,15 +139,12 @@ if __name__ == "__main__":
     monitor = None
     # Create a monitor
     if args.monitor:
-        import magi.monitor
         monitor = magi.monitor.ActionMonitor()
 
-        # Setup a signal handler to gracefully kill the monitor
         def signal_handler(signum, frame):
+            """Signal handler to gracefully kill the monitor."""
             monitor.stop()
-            import sys
             sys.exit(0)
-        import signal
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
@@ -153,7 +179,6 @@ if __name__ == "__main__":
         LOGGER.info('Failed to execute task: %s', str(err))
         raise
 
-    import IPython
     IPython.embed()
 
     if monitor:
