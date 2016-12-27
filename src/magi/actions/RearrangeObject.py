@@ -1,3 +1,8 @@
+"""
+Define RearrangeObjectAction, RearrangeObjectSolution, and
+RearrangeObjectExecutableSolution.
+"""
+
 from contextlib import nested
 import logging
 
@@ -22,23 +27,33 @@ LOGGER = logging.getLogger(__name__)
 
 
 class RearrangeObjectExecutableSolution(ExecutableSolution):
+    """An ExecutableSolution that executes a rearrangement trajectory."""
+
     def __init__(self, solution, traj):
         """
-        @param solution The solution this ExecutableSolution was generated from
-        @param traj The trajectory to execute
+        @param solution: Solution that generated this ExecutableSolution
+        @param traj: trajectory to execute
         """
         super(RearrangeObjectExecutableSolution, self).__init__(solution)
         self.traj = traj
 
     @property
     def action(self):
+        """
+        Return the solution's Action.
+
+        @return RearrangeObjectAction
+        """
         return self.solution.action
 
     def execute(self, env, simulate):
         """
-        Executes a rearrangement trajectory.
-        @param env The OpenRAVE environment
-        @param simulate If True, execute the action in simulation
+        Execute a rearrangement trajectory.
+
+        @param env: OpenRAVE environment
+        @param simulate: flag to run in simulation
+        @return the executed trajectory
+        @throws an ActionError if the or_pushing module is missing
         """
         # TODO: Assert the action is of type RearrangeAction
 
@@ -82,12 +97,14 @@ class RearrangeObjectExecutableSolution(ExecutableSolution):
 
 
 class RearrangeObjectSolution(Solution):
+    """A Solution that executes a rearrangement trajectory."""
+
     def __init__(self, action, traj, deterministic):
         """
-        @param action The RearrangeAction that generated this solution
-        @param traj The trajectory planned by the action
-        @param deterministic True if the traj for this Solution was generated
-        with a deterministic planner
+        @param action: Action that generated this Solution
+        @param traj: trajectory planned by the Action
+        @param deterministic: True if this solution was computed
+          deterministically
         """
         super(RearrangeObjectSolution, self).__init__(
             action, determinsitic=deterministic)
@@ -95,8 +112,11 @@ class RearrangeObjectSolution(Solution):
 
     def save(self, env):
         """
-        Save the pose of the robot and all the movable objects
-        @param env The OpenRAVE environment
+        Return a context manager that saves the pose of the robot and all the
+        movable objects.
+
+        @param env: OpenRAVE environment
+        @return a context manager
         """
         robot = self.action.get_robot(env)
         movable_objects = self.action.get_movables(env)
@@ -119,8 +139,11 @@ class RearrangeObjectSolution(Solution):
 
     def jump(self, env):
         """
-        Move the manipulator and objects to their poses
-        at the end of the pushing trajectory
+        Move the manipulator and objects to their poses at the end of the
+        pushing trajectory.
+
+        @param env: OpenRAVE environment
+        @throws an ActionError if the or_pushing module is missing
         """
         if not HAS_RANDOMIZED_REARRANGEMENT_PLANNING:
             raise ActionError(
@@ -137,7 +160,10 @@ class RearrangeObjectSolution(Solution):
 
     def postprocess(self, env):
         """
-        Run post-processing on the trajectory generated for the rearrangement
+        Run post-processing on the trajectory generated for the rearrangement.
+        Currently does not perform any post-processing.
+
+        @return RearrangeObjectExecutableSolution
         """
         # TODO: PostProcessPath?
 
@@ -145,6 +171,8 @@ class RearrangeObjectSolution(Solution):
 
 
 class RearrangeObjectAction(Action):
+    """An Action that plans to rearrange objects."""
+
     def __init__(self,
                  manipulator,
                  obj,
@@ -156,19 +184,20 @@ class RearrangeObjectAction(Action):
                  name=None,
                  kwargs=None):
         """
-        @param manipulator The manipulator to use to push the object
-        @param obj The object being pushed
-        @param on_obj The support surface to push the object along
-        @param goal_pose The [x,y] final pose of the object
-        @param goal_epsilon The maximum distance away from pose the object can be at
-         the end of the trajectory
-        @param movables The other objects in the environment that can be moved
-         while attempting to achieve the goal
-        @param required If True, and a plan cannot be found, raise an ActionError. If False,
-        and a plan cannot be found, return an empty solution so execution can proceed normally.
-        @param name The name of the action
-        @param kwargs Additional keyword arguments to be
-        passed to the planner generating the pushing trajectory
+        @param manipulator: OpenRAVE manipulator to use to push the object
+        @param obj: object being pushed
+        @param on_obj: support surface to push the object along
+        @param goal_pose: [x,y] final pose of the object
+        @param goal_epsilon: maximum distance away from pose the object can be
+          at the end of the trajectory (meters)
+        @param movables: other objects in the environment that can be moved
+          while attempting to achieve the goal
+        @param required: if True, and a plan cannot be found, raise an
+          ActionError. If False, and a plan cannot be found, return an empty
+          solution so execution can proceed normally.
+        @param name: name of the action
+        @param kwargs: additional keyword arguments to be passed to the planner
+          generating the pushing trajectory
         """
         super(RearrangeObjectAction, self).__init__(name=name)
         self._manipulator = to_key(manipulator)
@@ -188,31 +217,75 @@ class RearrangeObjectAction(Action):
         self.planner_params = None
 
     def get_manipulator(self, env):
+        """
+        Look up and return the manipulator in the environment.
+
+        @param env: OpenRAVE environment
+        @return an OpenRAVE manipulator
+        """
         return from_key(env, self._manipulator)
 
     def get_robot(self, env):
+        """
+        Look up and return the robot in the environment.
+
+        @param env: OpenRAVE environment
+        @return an OpenRAVE robot
+        """
         return self.get_manipulator(env).GetRobot()
 
     def get_movables(self, env):
+        """
+        Look up and return the moveable objects in the environment.
+
+        @param env: OpenRAVE environment
+        @return a list of moveable KinBodies
+        """
         objs = [from_key(env, m) for m in self._movables]
         return objs
 
     def get_pushed_object(self, env):
+        """
+        Look up and return the object to push in the environment.
+
+        @param env: OpenRAVE environment
+        @return a KinBody to push
+        """
         return from_key(env, self._object)
 
     def get_on_obj(self, env):
+        """
+        Look up and return the object to push along in the environment.
+
+        @param env: OpenRAVE environment
+        @return a KinBody to push the object along
+        """
         return from_key(env, self._on_object)
 
     def get_planner_kwargs(self):
+        """
+        Return the planner parameters.
+
+        @return the planner parameters
+        """
         return self.planner_params
 
     def get_planned_path(self):
+        """
+        Return the planned path from OMPL.
+
+        @return the OMPL path
+        """
         return self.ompl_path
 
     def plan(self, env):
         """
-        Plan to rearrange objects
-        @param env The OpenRAVE environment
+        Plan to rearrange objects.
+
+        @param env: OpenRAVE environment
+        @return a RearrangeObjectSolution
+        @throws an ActionError if the or_pushing module is missing, or if an
+          error is encountered during planning
         """
         if not HAS_RANDOMIZED_REARRANGEMENT_PLANNING:
             raise ActionError(
