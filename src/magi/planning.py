@@ -1,3 +1,5 @@
+"""MAGI planners."""
+
 from abc import abstractmethod
 from contextlib import contextmanager
 import logging
@@ -16,13 +18,21 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TimeoutException(Exception):
+    """Exception class for timeouts."""
     pass
 
 
 @contextmanager
 def time_limit(seconds):
+    """
+    Return a context manager that aborts a function call if it takes too long.
+
+    @param seconds: number of seconds to allow the function to run
+    @return a context manager
+    """
     # http://stackoverflow.com/questions/366682/how-to-limit-execution-time-of-a-function-call-in-python
     def signal_handler(signum, frame):
+        """Raise TimeoutException."""
         raise TimeoutException('Failed to complete task before timeout')
 
     signal.signal(signal.SIGALRM, signal_handler)
@@ -34,16 +44,20 @@ def time_limit(seconds):
 
 
 class Planner(object):
+    """Abstract base class for planners."""
+
     def plan_timed(self, env, action, timeout=30, output_queue=None):
         """
-        Plan for a user specified amount of time
-        Raises TimeoutException if timelimit is encountered
-        @param env The OpenRAVE environment to plan in
-        @param action The Action to plan
-        @param timeout planning time limit in seconds
-        @param output_queue Queue object that is updated with Solutions as they
-                            become available
-        @return A Solution
+        Plan for a user specified amount of time.
+
+        Raises TimeoutException if time limit is encountered
+
+        @param env: OpenRAVE environment
+        @param action: Action to plan
+        @param timeout: planning time limit in seconds
+        @param output_queue: Queue object that is updated with Solutions as they
+          become available
+        @return a Solution
         """
         with time_limit(timeout):
             return self.plan_action(env, action, output_queue=output_queue)
@@ -51,21 +65,25 @@ class Planner(object):
     @abstractmethod
     def plan_action(self, env, action, output_queue=None):
         """
-        Generate and return a solution for an action of type SequenceAction
-        @param env The OpenRAVE environment to plan in
-        @param action The Action to plan
-        @return A Solution
+        Generate and return a solution for an action of type SequenceAction.
+
+        @param env: OpenRAVE environment
+        @param action: Action to plan
+        @param output_queue: Queue that is updated with Solutions as they become
+          available
+        @return a Solution
         """
         pass
 
 
 def _build_tree(action, G, node_map, parent_nodes=None):
     """
-    Recursively expand a Sequence action
-    @parent action The action to expand
-    @param G The tree
-    @param node_map A map from node names in the tree to action objects
-    @param parent_nodes The parents for this action
+    Recursively expand a Sequence action.
+
+    @parent action: action to expand
+    @param G: the tree
+    @param node_map: map from node names in the tree to action objects
+    @param parent_nodes: parents for this action
     """
     if parent_nodes is None:
         parent_nodes = []
@@ -94,17 +112,20 @@ def _build_tree(action, G, node_map, parent_nodes=None):
 
 
 class DepthFirstPlanner(Planner):
+    """Depth-first planner."""
+
     def __init__(self,
                  max_action_attempts=5,
                  monitor=None,
                  use_frustration=False,
                  keep_trying=True):
         """
-        @param max_action_attempts The max times to attempt to plan an action
-          at any  particular visit to a node
-        @param monitor The monitor to register planning progress to
-        @param use_frustration Use frustration style backtracking instead of a pure DFS
-        @param keep_trying Continue to restart until success or timeout (if used)
+        @param max_action_attempts: max times to attempt to plan an action at
+          any particular visit to a node
+        @param monitor: monitor to register planning progress to
+        @param use_frustration: use frustration style backtracking instead of a
+          pure DFS
+        @param keep_trying: continue to restart until success or timeout (if used)
         """
         self.num_attempts = max_action_attempts
         self.monitor = monitor
@@ -125,9 +146,11 @@ class DepthFirstPlanner(Planner):
 
     def plan_action(self, env, action, output_queue=None):
         """
-        @param env The environment to plan in
-        @param action The starting HGPC action to plan from
-        @param output_queue A queue of solutions to put out when a checkpoint is reached
+        Generate and return a solution for a SequenceAction.
+
+        @param env: OpenRAVE environment
+        @param action: starting Action to plan from
+        @param output_queue: queue of solutions to put out when a checkpoint is reached
         """
         self.G = nx.DiGraph(format='svg')
         _build_tree(action, self.G, self.node_map)
@@ -175,6 +198,13 @@ class DepthFirstPlanner(Planner):
         return SequenceSolution(action=action, solutions=solutions)
 
     def _plan_recursive(self, env, node_ids, num_attempts):
+        """
+        Plan actions recursively.
+
+        @param env: OpenRAVE environment
+        @param node_ids: ids of satisfied nodes in the graph
+        @param num_attempts: max number of attempts to plan
+        """
         monitor = self.monitor
 
         # If this was called on a leaf node, we are all done
@@ -374,11 +404,14 @@ class DepthFirstPlanner(Planner):
 
 
 class RestartPlanner(Planner):
+    """Restarting planner."""
+
     def __init__(self, max_action_attempts=5, monitor=None, keep_trying=True):
         """
-        @param max_action_attempts The max times to attempt to plan an action
-          at any  particular visit to a node
-        @param monitor The monitor to register planning progress to
+        @param max_action_attempts: max times to attempt to plan an action at
+          any particular visit to a node
+        @param monitor: monitor to register planning progress to
+        @param keep_trying: continue to restart until success or timeout (if used)
         """
         self.num_attempts = max_action_attempts
         self.monitor = monitor
@@ -390,6 +423,13 @@ class RestartPlanner(Planner):
         return 'restart'
 
     def plan_action(self, env, action, output_queue=None):
+        """
+        Generate and return a solution for a SequenceAction.
+
+        @param env: OpenRAVE environment
+        @param action: starting Action to plan from
+        @param output_queue: queue of solutions to put out when a checkpoint is reached
+        """
         if output_queue is not None:
             LOGGER.warning(
                 'RestartPlanner does not support parallel planning' \
@@ -428,6 +468,12 @@ class RestartPlanner(Planner):
         raise ActionError('Failed to plan for action %s' % action.get_name())
 
     def _plan_recursive(self, env, node_ids):
+        """
+        Plan actions recursively.
+
+        @param env: OpenRAVE environment
+        @param node_ids: ids of satisfied nodes in the graph
+        """
         monitor = self.monitor
 
         if not node_ids:
