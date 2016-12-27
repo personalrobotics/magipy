@@ -39,7 +39,7 @@ class PlanExecutableSolution(ExecutableSolution):
                 traj = robot.ExecuteTrajectory(traj_copy)
             SetTrajectoryTags(traj, {Tags.EXECUTION_TIME: timer.get_duration()}, append=True)
 
-            from hgpc.logging_utils import log_execution_data
+            from magi.logging_utils import log_execution_data
             log_execution_data(traj, self.action.get_name())
             return traj
 

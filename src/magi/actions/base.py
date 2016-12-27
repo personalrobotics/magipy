@@ -135,6 +135,8 @@ class Action(object):
 
         @param env: OpenRAVE environment
         @param simulated: flag to run in simulation
+        @param validate: If True, run with validation.
+        @param detector: Has Update metho that updates env. Used for validation.
         @return result of executing the action
         """
 
