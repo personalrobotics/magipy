@@ -196,6 +196,7 @@ class MoveUntilTouchAction(Action):
         Look up and return the manipulator in the environment.
 
         @param env: OpenRAVE environment
+        @return an OpenRAVE manipulator
         """
         return from_key(env, self._manipulator)
 
@@ -205,7 +206,7 @@ class MoveUntilTouchAction(Action):
 
         @param env: OpenRAVE environment
         @param bodies: list of body keys
-        @return Kinbodies
+        @return list of Kinbodies
         """
         return [from_key(env, key) for key in bodies]
 

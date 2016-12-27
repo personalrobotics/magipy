@@ -454,6 +454,7 @@ class GrabObjectAction(MoveHandAction):
         Look up and return the manipulator in the environment.
 
         @param env: OpenRAVE environment
+        @return a prpy.EndEffector
         """
         return from_key(env, self._manipulator)
 
@@ -581,6 +582,7 @@ class ReleaseObjectAction(MoveHandAction):
         Look up and return the object in the environment.
 
         @param env: OpenRAVE environment
+        @return KinBody to be released
         """
         return from_key(env, self._obj)
 
@@ -589,6 +591,7 @@ class ReleaseObjectAction(MoveHandAction):
         Look up and return the manipulator in the environment.
 
         @param env: OpenRAVE environment
+        @return an OpenRAVE manipulator
         """
         return from_key(env, self._manipulator)
 
