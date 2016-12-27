@@ -141,7 +141,7 @@ class ValidateAction(Action):
         Override Action.get_name to return the name of the wrapped action if a
         name was not specified for this action.
 
-        @return: name of this action, or the name of the wrapped action
+        @return name of this action, or the name of the wrapped action
         """
         if self._name is not None:
             return self._name
