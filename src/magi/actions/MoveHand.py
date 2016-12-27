@@ -134,10 +134,13 @@ class MoveHandSolution(Solution, ExecutableSolution):
         @param q_goal: goal configuration (dof values)
         @param dof_indices: indices of the dofs specified in q_goal
         """
-        def collision_callback(report):
+        def collision_callback(report, is_physics):
             """
             Callback for collision detection. Add the links that are in
             collision to the colliding_links set in the enclosing frame.
+
+            @param report: collision report
+            @param is_physics: whether collision is from physics
             """
             colliding_links.update([report.plink1, report.plink2])
             return CollisionAction.Ignore
