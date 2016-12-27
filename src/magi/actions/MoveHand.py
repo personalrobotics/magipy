@@ -1,3 +1,9 @@
+"""
+Define MoveHandAction, MoveHandSolution, CloseHandAction, OpenHandAction,
+GrabObjectAction, GrabObjectSolution, ReleaseObjectAction,
+ReleaseObjectSolution, and ReleaseAllGrabbedAction.
+"""
+
 from contextlib import nested
 
 import numpy as np
@@ -10,6 +16,11 @@ from magi.actions.validators.PoseValidator import ObjectPoseValidator
 
 
 class MoveHandSolution(Solution, ExecutableSolution):
+    """
+    A Solution and ExecutableSolution that moves a hand to a desired
+    configuration.
+    """
+
     def __init__(self,
                  action,
                  dof_values,
@@ -17,10 +28,11 @@ class MoveHandSolution(Solution, ExecutableSolution):
                  precondition=None,
                  postcondition=None):
         """
-        @param action The Action that created this Solution
-        @param dof_values A list of dof values to move the hand to
-        @param dof_indices A list of the indices of the dofs to move -
-        list ordering should correspond to dof_values
+        @param action: Action that generated this Solution
+        @param dof_values: list of dof values to move the hand to
+        @param dof_indices: indices of the dofs specified in dof_values
+        @param precondition: Validator that validates preconditions
+        @param postcondition: Validator that validates postconditions
         """
         Solution.__init__(
             self,
@@ -36,9 +48,10 @@ class MoveHandSolution(Solution, ExecutableSolution):
 
     def save(self, env):
         """
-        @param env The OpenRAVE environment
-        @return An OpenRAVE RobotStateSaver that saves LinkTransformation values
-        - i.e. save the current dof values
+        Return a context manager that saves the current robot configuration.
+
+        @param env: OpenRAVE environment
+        @return OpenRAVE RobotStateSaver that saves LinkTransformation values
         """
         robot = self.action.get_hand(env).GetParent()
 
@@ -47,10 +60,10 @@ class MoveHandSolution(Solution, ExecutableSolution):
 
     def jump(self, env):
         """
-        Move the dof_indices specified when creating the Solution object
-        to the specified dof_values, or the last valid configuration
-        as the hand moves toward those values.
-        @param env The OpenRAVE environment
+        Move the dof_indices to the specified dof_values, or the last valid
+        configuration as the hand moves toward those values.
+
+        @param env: OpenRAVE environment
         """
         hand = self.action.get_hand(env)
         robot = hand.GetParent()
@@ -68,16 +81,19 @@ class MoveHandSolution(Solution, ExecutableSolution):
 
     def postprocess(self, env):
         """
-        Does nothing.
-        @return This object, unchanged.
+        Do nothing.
+
+        @param env: OpenRAVE environment
+        @return this object, unchanged
         """
         return self
 
     def execute(self, env, simulate):
         """
-        Executes the motion of the hand
-        @param env The OpenRAVE environment
-        @param simulate If true, the execution should be done in simulation
+        Execute the motion of the hand.
+
+        @param env: OpenRAVE environment
+        @param simulate: flag to run in simulation
         """
         hand = self.action.get_hand(env)
         robot = hand.GetParent()
@@ -105,17 +121,24 @@ class MoveHandSolution(Solution, ExecutableSolution):
         else:
             hand.MoveHand(*self.dof_values, timeout=None)
 
+    # FIXME: do q_goal and dof_indices need to be parameters to this function?
+    # It seems that they're always set to self.dof_values, self.dof_indices.
     def _get_trajectory(self, robot, q_goal, dof_indices):
         """
-        Generates a hand trajectory that attempts to move the specified dof_indices
-        to the configuration indicated in q_goal.  The trajectory will move the hand
-        until q_goal is reached or an invalid configuration - usually collision
-        - is detected.
-        @param robot The OpenRAVE robot
-        @param q_goal The goal configuration
-        @param dof_indices The indices of the dofs specified in q_goal
+        Generates a hand trajectory that attempts to move the specified
+        dof_indices to the configuration indicated in q_goal. The trajectory
+        will move the hand until q_goal is reached or an invalid configuration
+        (usually collision) is detected.
+
+        @param robot: OpenRAVE robot
+        @param q_goal: goal configuration (dof values)
+        @param dof_indices: indices of the dofs specified in q_goal
         """
         def collision_callback(report):
+            """
+            Callback for collision detection. Add the links that are in
+            collision to the colliding_links set in the enclosing frame.
+            """
             colliding_links.update([report.plink1, report.plink2])
             return CollisionAction.Ignore
 
@@ -127,11 +150,13 @@ class MoveHandSolution(Solution, ExecutableSolution):
 
         handle = env.RegisterCollisionCallback(collision_callback)
 
-        with robot.CreateRobotStateSaver(
-            Robot.SaveParameters.ActiveDOF
-            | Robot.SaveParameters.LinkTransformation),\
-             CollisionOptionsStateSaver(collision_checker,
-                                        CollisionOptions.ActiveDOFs):
+        with \
+            robot.CreateRobotStateSaver(
+                Robot.SaveParameters.ActiveDOF
+                | Robot.SaveParameters.LinkTransformation), \
+            CollisionOptionsStateSaver(
+                collision_checker,
+                CollisionOptions.ActiveDOFs):
 
             robot.SetActiveDOFs(dof_indices)
             q_prev = robot.GetActiveDOFValues()
@@ -207,6 +232,12 @@ class MoveHandSolution(Solution, ExecutableSolution):
 
 
 class MoveHandAction(Action):
+    """An Action that moves a hand to a desired configuration."""
+
+    BARRETT_CLOSE_CONFIGURATION = 2.4 * np.ones(3)
+    BARRETT_OPEN_CONFIGURATION = np.zeros(3)
+    BARRETT_FINGER_INDICES = np.arange(3)
+
     def __init__(self,
                  hand,
                  dof_values,
@@ -216,10 +247,12 @@ class MoveHandAction(Action):
                  postcondition=None):
         """
         Move hand to a desired configuration
-        @param hand The hand to move
-        @param dof_values The desired configuration for the hand
-        @param dof_indices The indices of the dofs specified in dof_values
-        @param name The name of the action
+        @param hand: EndEffector to move
+        @param dof_values: list of dof values to move the hand to
+        @param dof_indices: indices of the dofs specified in dof_values
+        @param name: name of the action
+        @param precondition: Validator that validates preconditions
+        @param postcondition: Validator that validates postconditions
         """
         super(MoveHandAction, self).__init__(
             name=name, precondition=precondition, postcondition=postcondition)
@@ -230,16 +263,19 @@ class MoveHandAction(Action):
 
     def get_hand(self, env):
         """
-        Lookup and return the hand in the given OpenRAVE environment
-        @param env The OpenRAVE environment
-        @param A prpy Hand
+        Look up and return the hand in the given OpenRAVE environment.
+
+        @param env: OpenRAVE environment
+        @return a prpy.EndEffector
         """
         return from_key(env, self._hand)
 
     def plan(self, env):
         """
-        No planning is performed. Just creates and returns a MoveHandSolution.
-        @return A MoveHandSolution
+        No planning is performed; just create and return a MoveHandSolution.
+
+        @param env: OpenRAVE environment
+        @return a MoveHandSolution
         """
         return MoveHandSolution(
             action=self,
@@ -249,33 +285,42 @@ class MoveHandAction(Action):
 
 class CloseHandAction(MoveHandAction):
     """
-    Helper subclass of MoveHandAction that closes the fingers
-    @param hand The hand to close
-    @param name The name of the action - defaults to CloseHandAction
+    Helper subclass of MoveHandAction that closes the fingers.
     """
+
     def __init__(self, hand, name='CloseHandAction'):
+        """
+        @param hand: hand to close
+        @param name: name of the action, defaults to CloseHandAction
+        """
         super(CloseHandAction, self).__init__(
             hand=hand,
-            dof_values=[2.4, 2.4, 2.4],
-            dof_indices=hand.GetIndices()[0:3],
+            dof_values=self.BARRETT_CLOSE_CONFIGURATION,
+            dof_indices=hand.GetIndices()[self.BARRETT_FINGER_INDICES],
             name=name)
 
 
 class OpenHandAction(MoveHandAction):
     """
-    Helper subclass of MoveHandAction that opens the fingers completely
-    @param hand The hand to open
-    @param name The name of the action - defaults to OpenHandAction
+    Helper subclass of MoveHandAction that opens the fingers completely.
     """
+
     def __init__(self, hand, name='OpenHandAction'):
+        """
+        @param hand: hand to open
+        @param name: name of the action, defaults to OpenHandAction
+        """
         super(OpenHandAction, self).__init__(
             hand=hand,
-            dof_values=[0.0, 0.0, 0.0],
-            dof_indices=hand.GetIndices()[0:3],
+            dof_values=self.BARRETT_OPEN_CONFIGURATION,
+            dof_indices=hand.GetIndices()[self.BARRETT_FINGER_INDICES],
             name=name)
 
 
 class GrabObjectSolution(MoveHandSolution):
+    """
+    A Solution and ExecutableSolution that closes the hand and grabs an object.
+    """
     def __init__(self,
                  action,
                  obj,
@@ -284,10 +329,12 @@ class GrabObjectSolution(MoveHandSolution):
                  precondition=None,
                  postcondition=None):
         """
-        @param action The Action that generated this solution
-        @param obj The object to grab
-        @param dof_values The configuration to move the hand to before performing the grab
-        @param dof_indices The DOF indices that correspond to the values in dof_values
+        @param action: Action that generated this Solution
+        @param obj: object to grab
+        @param dof_values: configuration to move the hand to before the grab
+        @param dof_indices: indices of the dofs specified in dof_values
+        @param precondition: Validator that validates preconditions
+        @param postcondition: Validator that validates postconditions
         """
         super(GrabObjectSolution, self).__init__(
             action, dof_values, dof_indices, precondition, postcondition)
@@ -295,14 +342,20 @@ class GrabObjectSolution(MoveHandSolution):
 
     def get_obj(self, env):
         """
-        Lookup the object to grasp in the environment and return it
+        Look up and return the object to grasp in the environment.
+
+        @param env: OpenRAVE environment
+        @return the KinBody to be grasped
         """
         return from_key(env, self._obj)
 
     def save(self, env):
         """
-        @return The result of MoveHandSolution.save and a RobotStateSaver
-        that saves the set of GrabbedBodies
+        Save robot pose, object pose, and grabbed bodies.
+
+        @param env: OpenRAVE environment
+        @return the result of MoveHandSolution.save and a RobotStateSaver that
+          saves the set of GrabbedBodies
         """
         robot = self.action.get_hand(env).GetParent()
 
@@ -314,16 +367,18 @@ class GrabObjectSolution(MoveHandSolution):
         """
         Move the hand to the desired dof_values, or the last valid configuration
         on the way to these values. Grab the object.
-        @param env The OpenRAVE environment
+
+        @param env: OpenRAVE environment
         """
+        # Close the hand
+        super(GrabObjectSolution, self).jump(env)
+
         hand = self.action.get_hand(env)
         robot = hand.GetParent()
         obj = self.get_obj(env)
         manipulator = self.action.get_manipulator(env)
 
-        super(GrabObjectSolution, self).jump(env)
-
-        # Now grab the object
+        # Grab the object
         with robot.CreateRobotStateSaver(
             Robot.SaveParameters.ActiveManipulator):
             robot.SetActiveManipulator(manipulator)
@@ -334,10 +389,10 @@ class GrabObjectSolution(MoveHandSolution):
     def execute(self, env, simulate):
         """
         Close the hand and grab the object.
-        @param env The OpenRAVE environment
-        @param simulate If True, simulate execution
-        """
 
+        @param env: OpenRAVE environment
+        @param simulate: flag to run in simulation
+        """
         # Close the hand
         super(GrabObjectSolution, self).execute(env, simulate)
 
@@ -356,6 +411,10 @@ class GrabObjectSolution(MoveHandSolution):
 
 
 class GrabObjectAction(MoveHandAction):
+    """
+    An Action that closes the hand and grabs an object.
+    """
+
     def __init__(self,
                  hand,
                  obj,
@@ -365,18 +424,20 @@ class GrabObjectAction(MoveHandAction):
                  precondition=None,
                  postcondition=None):
         """
-        Close the hand and grab an object.
-        @param hand The hand to grab the object
-        @param obj The object to grab
-        @param dof_values The desired dof_values to move the hand to
-        if None, defaults to a fully closed configuration
-        @param dof_indices The DOF indices corresponding to configuration specified
-         in dof_values, if None defaults to only finger dofs
+        @param hand: hand to grab the object with
+        @param obj: object to grab
+        @param dof_values: configuration to move the hand to before the grab
+          if None, defaults to a fully closed configuration
+        @param dof_indices: indices of the dofs specified in dof_values
+          if None defaults to only finger dofs
+        @param name: name of the action
+        @param precondition: Validator that validates preconditions
+        @param postcondition: Validator that validates postconditions
         """
         if dof_values is None:
-            dof_values = [2.4, 2.4, 2.4]
+            dof_values = self.BARRETT_CLOSE_CONFIGURATION
         if dof_indices is None:
-            dof_indices = hand.GetIndices()[0:3]
+            dof_indices = hand.GetIndices()[self.BARRETT_FINGER_INDICES]
 
         super(GrabObjectAction, self).__init__(
             hand,
@@ -390,17 +451,20 @@ class GrabObjectAction(MoveHandAction):
 
     def get_manipulator(self, env):
         """
-        Lookup the manipulator in the environment and return it
+        Look up and return the manipulator in the environment.
+
+        @param env: OpenRAVE environment
         """
         return from_key(env, self._manipulator)
 
     def plan(self, env):
         """
-        Does nothing.
-        @return A GrabObjectSolution
-        """
+        No planning; just create and return a GrabObjectSolution.
 
-        # Add precondition posevalidator
+        @param env: OpenRAVE environment
+        @return a GrabObjectSolution
+        """
+        # Add PoseValidator precondition
         obj = from_key(env, self._obj)
         obj_pose_validator = ObjectPoseValidator(obj.GetName(),
                                                  obj.GetTransform())
@@ -414,54 +478,71 @@ class GrabObjectAction(MoveHandAction):
 
 
 class ReleaseObjectsSolution(MoveHandSolution):
+    """
+    A Solution and ExecutableSolution that opens the hand and releases objects.
+    """
+
     def __init__(self, action, objs, dof_values, dof_indices):
         """
-        @param action The action that created the solution
-        @param objs The list of objects that should be released
-        @param dof_values The configuration the hand should be moved to before releasing objects
-        @param dof_indices The indices of the DOFs specified in dof_valuesx
+        @param action: Action that generated this Solution
+        @param objs: list of objects that should be released
+        @param dof_values: configuration to move the hand to before releasing
+        @param dof_indices: indices of the dofs specified in dof_values
         """
         super(ReleaseObjectsSolution, self).__init__(action, dof_values,
                                                      dof_indices)
         self._objs = [to_key(o) for o in objs]
 
     def get_obj(self, env, obj_key):
+        """
+        Look up and return a particular object to release in the environment.
+
+        @param env: OpenRAVE environment
+        @param obj_key: key for the object to release
+        @return the KinBody to be released
+        """
         return from_key(env, obj_key)
 
     def save(self, env):
         """
-        Saves robot pose, object pose and grabbed bodies
-        @param env The OpenRAVE environment
+        Save robot pose, object pose, and grabbed bodies.
+
+        @param env: OpenRAVE environment
+        @return context manager
         """
         robot = self.action.get_hand(env).GetParent()
 
+        # QUESTION: how does this save object pose?
         return nested(
             super(ReleaseObjectsSolution, self).save(env),
             robot.CreateRobotStateSaver(Robot.SaveParameters.GrabbedBodies))
 
     def jump(self, env):
         """
-        Move to the end of the hand opening trajectory and drop the object
-         if necessary
-        @param env The OpenRAVE environment
+        Open the hands to the desired dof_values and drop the object, if
+        necessary.
+
+        @param env: OpenRAVE environment
         """
         super(ReleaseObjectsSolution, self).jump(env)
 
         manipulator = self.action.get_manipulator(env)
         robot = manipulator.GetRobot()
 
-        # Release the object
+        # Release the objects
         for obj_key in self._objs:
             obj = self.get_obj(env, obj_key)
             robot.Release(obj)
 
     def execute(self, env, simulate):
         """
-        Open the hand and release the object. If drop was set
-        on the action, also move the object down until it is in
+        Open the hand and release the object.
+
+        If drop was set on the action, also move the object down until it is in
         collision with another object, to simulate a drop.
-        @param env The OpenRAVE environment
-        @param simulate If true, simulate execution
+
+        @param env: OpenRAVE environment
+        @param simulate: flag to run in simulation
         """
         # Open the hand
         super(ReleaseObjectsSolution, self).execute(env, simulate)
@@ -469,21 +550,25 @@ class ReleaseObjectsSolution(MoveHandSolution):
         manipulator = self.action.get_manipulator(env)
         robot = manipulator.GetRobot()
 
-        # Release the object
+        # Release the objects
         for obj_key in self._objs:
             obj = self.get_obj(env, obj_key)
+            # FIXME: does this simulate a drop?
             robot.Release(obj)
 
 
 class ReleaseObjectAction(MoveHandAction):
+    """
+    An Action that opens the hand and releases an object.
+    """
+
     def __init__(self, hand, obj, dof_values, dof_indices, name=None):
         """
-        Open the hand and release an object.
-        @param hand The hand to grab the object with
-        @param obj The object to release
-        @param dof_values The configuration to move the hand to before releasing
-        @param dof_idnices The indices of the DOFs specified in dof_values
-        @param name The name of the action
+        @param hand: hand to release the object with
+        @param obj: object to release
+        @param dof_values: configuration to move the hand to before releasing
+        @param dof_indices: indices of the dofs specified in dof_values
+        @param name: name of the action
         """
         super(ReleaseObjectAction, self).__init__(
             hand, dof_values=dof_values, dof_indices=dof_indices, name=name)
@@ -493,20 +578,26 @@ class ReleaseObjectAction(MoveHandAction):
 
     def get_obj(self, env):
         """
-        Lookup the object in the environment and return it
+        Look up and return the object in the environment.
+
+        @param env: OpenRAVE environment
         """
         return from_key(env, self._obj)
 
     def get_manipulator(self, env):
         """
-        Lookup the manipulator in the environment and return it
+        Look up and return the manipulator in the environment.
+
+        @param env: OpenRAVE environment
         """
         return from_key(env, self._manipulator)
 
     def plan(self, env):
         """
-        Does nothing.
-        @return ReleaseObjectSolution
+        No planning; just create and return a ReleaseObjectsSolution.
+
+        @param env: OpenRAVE environment
+        @return a ReleaseObjectsSolution
         """
         return ReleaseObjectsSolution(
             action=self,
@@ -516,36 +607,37 @@ class ReleaseObjectAction(MoveHandAction):
 
 
 class ReleaseAllGrabbedAction(MoveHandAction):
+    """
+    An Action that opens the hand and releases all grabbed objects.
+    """
+
     def __init__(self, hand, dof_values, dof_indices, name=None):
         """
-        Open the hand and release all objects grabbed by the robot
-        @param hand The hand to grab the object with
-        @param dof_values The configuration to move the hand to before releasing
-        @param dof_indices The indices of the DOFs specified in dof_values
-        @param name The name of the action
+        @param hand: hand to release the object with
+        @param dof_values: configuration to move the hand to before releasing
+        @param dof_indices: indices of the dofs specified in dof_values
+        @param name: name of the action
         """
         super(ReleaseAllGrabbedAction, self).__init__(
             hand, dof_values=dof_values, dof_indices=dof_indices, name=name)
 
         self._manipulator = to_key(hand.manipulator)
 
-    def get_obj(self, env):
-        """
-        Lookup the object in the environment and return it
-        """
-        return from_key(env, self._obj)
-
     def get_manipulator(self, env):
         """
-        Lookup the manipulator in the environment and return it
+        Look up and return the manipulator in the environment.
+
+        @param env: OpenRAVE environment
         """
         return from_key(env, self._manipulator)
 
     def plan(self, env):
         """
-        Computes the list of bodies currently grabbed
-        by the robot.
-        @return A ReleaseObjectSolution
+        Compute the list of bodies currently grabbed by the robot and return a
+        ReleaseObjectsSolution.
+
+        @param env: OpenRAVE environment
+        @return a ReleaseObjectsSolution
         """
         manipulator = self.get_manipulator(env)
         robot = manipulator.GetRobot()
