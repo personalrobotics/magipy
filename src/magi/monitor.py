@@ -1,3 +1,5 @@
+"""MAGI action monitor."""
+
 from Queue import Queue
 import threading
 
@@ -6,7 +8,14 @@ import networkx as nx
 import numpy as np
 import pylab
 
+
 def get_action_name(action):
+    """
+    Get action name.
+
+    @param action: Action
+    @return action's string name
+    """
     action_name = action.get_name()
     action_name = action_name.replace("_", "-")
     if action.checkpoint:
@@ -15,6 +24,8 @@ def get_action_name(action):
 
 
 class ActionResults(object):
+    """Action status enum."""
+
     # Unknown - result hasn't been reported yet
     UNKNOWN = -1
 
@@ -32,7 +43,10 @@ class ActionResults(object):
 
 def get_color(result):
     """
-    An action result
+    Convert an action result to an RGB color.
+
+    @param result: ActionResults
+    @return a list of RGB values
     """
     # Store colors for success, failure and unknown
     # colors taken from the palettable package
@@ -49,18 +63,20 @@ def get_color(result):
 
 
 class MonitorUpdateRequest(object):
-    # Used to indicate to the drawing thread that
-    #  data has been updated
+    """Used to indicate to the drawing thread that data has been updated."""
+
     pass
 
 
 class MonitorStopRequest(object):
-    # Used to indicate the drawing thread
-    # should close the window and exit
+    """Used to indicate the drawing thread should close the window and exit."""
+
     pass
 
 
 class ActionMonitor(object):
+    """Visualizer for action planning progress."""
+
     def __init__(self):
 
         # Create a lock for thread safety
@@ -78,10 +94,12 @@ class ActionMonitor(object):
         self.drawing_thread.start()
 
     def stop(self):
+        """Stop visualizing progress."""
         self.update_request_queue.put(MonitorStopRequest())
         self.drawing_thread.join()
 
     def _draw(self):
+        """Keep calling _redraw until visualization stops."""
         self.ax_graph = pylab.subplot(121)
         self.ax_bar = pylab.subplot(122)
         plt.show(block=False)
@@ -107,6 +125,7 @@ class ActionMonitor(object):
         plt.close()
 
     def reset(self):
+        """Reset visualization."""
         self.lock.acquire()
         try:
             self.node_metadata = {}
@@ -124,8 +143,10 @@ class ActionMonitor(object):
 
     def set_graph(self, G, node_map):
         """
-        @param G A networkx graph representing the relationship between actions
-        @param node_map A mapping from node name in G to action
+        Initialize graph.
+
+        @param G: networkx graph representing the relationship between actions
+        @param node_map: mapping from node name in G to action
         """
         self.lock.acquire()
         try:
@@ -143,6 +164,7 @@ class ActionMonitor(object):
             self.lock.release()
 
     def _draw_dot_plots(self):
+        """Draw dot plots."""
 
         # Clear the existing axis
         self.ax_bar.cla()
@@ -211,12 +233,24 @@ class ActionMonitor(object):
         self.ax_bar.set_xlim((-0.2, max_x + 1.5))
 
     def _draw_bargraphs(self):
+        """Draw bar graphs."""
+
         def compute_success(results):
+            """
+            Compute number of Actions that succeeded.
+
+            @param results: list of ActionResults
+            """
             return sum([1 if r == ActionResults.DETERMINISTIC_SUCCESS or \
                         r == ActionResults.NONDETERMINISTIC_SUCCESS \
                         else 0 for r in results])
 
         def compute_failures(results):
+            """
+            Compute number of Actions that failed.
+
+            @param results: list of ActionResults
+            """
             return len(results) - compute_success(results)
 
         categories = self.planned_actions
@@ -318,6 +352,15 @@ class ActionMonitor(object):
                         pos_layout,
                         label_layout,
                         depth=0):
+        """
+        Recursively compute the node layout.
+
+        @param node: node id to compute the layout with
+        @param branch_id: branch id for layout
+        @param pos_layout: dictionary of node positions
+        @param label_layout: dictionary of label positions
+        @param depth: depth of current node from root nodes
+        """
         if node not in pos_layout:
             pos_layout[node] = (branch_id, depth)
             label_layout[node] = (branch_id, depth)
@@ -327,9 +370,7 @@ class ActionMonitor(object):
                                  pos_layout, label_layout, depth + 1)
 
     def _draw_graph(self):
-        """
-        Draw the tree as a graph
-        """
+        """Draw the planning tree as a graph."""
 
         # Clear the existing axis
         self.ax_graph.cla()
@@ -422,18 +463,16 @@ class ActionMonitor(object):
         self.ax_graph.set_xlim((-0.2, max_out_degree + 0.5))
 
     def _redraw(self):
-        """
-        Redraw the graphs. Should be called
-        when any metadata is updated
-        """
+        """Redraw the graphs. Should be called when any metadata is updated."""
         self._draw_graph()
         self._draw_dot_plots()
         pylab.draw()
 
     def set_planning_action(self, action):
         """
-        Mark the action that is currently being planned
-        by the system
+        Mark the action that is currently being planned by the system.
+
+        @param action: Action currently being planned
         """
         self.lock.acquire()
         try:
@@ -452,8 +491,9 @@ class ActionMonitor(object):
 
     def set_post_processing_action(self, action):
         """
-        Mark the action that is currently being post-processed
-        by the system
+        Mark the action that is currently being postprocessed by the system.
+
+        @param action: Action currently being postprocessed
         """
         self.lock.acquire()
         try:
@@ -468,8 +508,9 @@ class ActionMonitor(object):
 
     def set_executing_action(self, action):
         """
-        Mark the action that is currently being executed
-        by the system
+        Mark the action that is currently being executed by the system.
+
+        @param action: Action currently being executed
         """
         self.lock.acquire()
         try:
@@ -484,10 +525,11 @@ class ActionMonitor(object):
 
     def update(self, action, success, deterministic):
         """
-        Update the counts on success or failed planning for the action
-        @param action The Action to update
-        @param success True if a plan was successfully generated for the Action
-        @param deterministic True if the method to solve the action is deterministic
+        Update the counts on success or failed planning for the action.
+
+        @param action: Action to update
+        @param success: True if a plan was successfully generated for the Action
+        @param deterministic: True if the method to solve the action is deterministic
         """
         self.lock.acquire()
         try:
