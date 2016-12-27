@@ -1,3 +1,8 @@
+"""
+Define MoveUntilTouchAction, MoveUntilTouchSolution, and
+MoveUntilTouchExecutableSolution.
+"""
+
 from contextlib import nested
 import logging
 
@@ -18,23 +23,32 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MoveUntilTouchExecutableSolution(ExecutableSolution):
+    """
+    An ExecutableSolution that moves in a direction for a specified distance
+    unless an object is touched.
+    """
+
     def __init__(self, solution, traj):
         """
-        @param solution The Solution object that generated this ExecutableSolution
-        @param traj The planned trajectory to be executed
+        @param solution: Solution object that generated this ExecutableSolution
+        @param traj: planned trajectory to be executed
         """
         super(MoveUntilTouchExecutableSolution, self).__init__(solution)
         self.traj = traj
 
     @property
     def action(self):
+        """
+        Return the solution's Action.
+        """
         return self.solution.action
 
     def execute(self, env, simulate):
         """
-        Execute the planned trajectory
-        @param env The OpenRAVE environment
-        @param simulate If True, execute in simulation
+        Execute the planned trajectory.
+
+        @param env: OpenRAVE environment
+        @param simulate: flag to run in simulation
         @return True if the trajectory was aborted due to touching an object
         """
         manipulator = self.action.get_manipulator(env)
@@ -50,12 +64,17 @@ class MoveUntilTouchExecutableSolution(ExecutableSolution):
 
 
 class MoveUntilTouchSolution(Solution):
+    """
+    A Solution that moves in a direction for a specified distance unless an
+    object is touched.
+    """
+
     def __init__(self, action, path, deterministic):
         """
-        @param action The Action that generated this Solution
-        @param path The path to execute
-        @param deterministic True if this Solution was generated
-        using a deterministic planner
+        @param action: Action that generated this Solution
+        @param path: path to execute
+        @param deterministic: True if this Solution was generated using a
+          deterministic planner
         """
         super(MoveUntilTouchSolution, self).__init__(
             action, deterministic=deterministic)
@@ -63,19 +82,25 @@ class MoveUntilTouchSolution(Solution):
 
     def save(self, env):
         """
+        Return a context manager that saves the current robot configuration.
+
+        @param env: OpenRAVE environment
         @return A RobotStateSaver that saves robot configuration (LinkTransformation)
         """
         robot = self.action.get_manipulator(env).GetRobot()
+
         return robot.CreateRobotStateSaver(
             Robot.SaveParameters.LinkTransformation)
 
     def postprocess(self, env):
         """
-        WARNING: This action has been temporarily disabled
+        WARNING: This action has been temporarily disabled.
+
         Postprocess the trajectory, adding required flags to indicate the trajectory
         should be stopped when high forces/torques are encountered.
-        @param env The OpenRAVE environment
-        @return A MoveUntilTouchExecutableSolution
+
+        @param env: OpenRAVE environment
+        @return a MoveUntilTouchExecutableSolution
         """
         manipulator = self.action.get_manipulator(env)
         robot = manipulator.GetRobot()
@@ -101,8 +126,10 @@ class MoveUntilTouchSolution(Solution):
 
     def jump(self, env):
         """
-        Move the robot to the last configuration before a touch is expected to occur
-        @param env The OpenRAVE environment
+        Move the robot to the last configuration before a touch is expected to
+        occur.
+
+        @param env: OpenRAVE environment
         """
         manipulator = self.action.get_manipulator(env)
         robot = manipulator.GetRobot()
@@ -117,6 +144,13 @@ class MoveUntilTouchSolution(Solution):
 
 
 class MoveUntilTouchAction(Action):
+    """
+    An Action that moves in a direction for the specified distance unless an
+    object is touched.
+    """
+
+    TORQUE_MAGNITUDE = 127 * np.ones(3)
+
     def __init__(self,
                  manipulator,
                  direction,
@@ -128,17 +162,18 @@ class MoveUntilTouchAction(Action):
                  planner=None,
                  name=None):
         """
-        @param manipulator The manipulator to move
-        @param direction The direction (3 dim vector - [x,y,z] in world coordinates)
-        @param min_distance The min distance to move
-        @param max_distance The max distance to move
-        @param target_bodies Any bodies that should be disabled during planning
-        @param force_magnitude The max allowable magnitude of force before considering the
+        @param manipulator: manipulator to move
+        @param direction: 3 dim vector - [x,y,z] in world coordinates
+        @param min_distance: min distance to move
+        @param max_distance: max distance to move
+        @param target_bodies: any bodies that should be disabled during planning
+        @param force_magnitude: max allowable magnitude of force before
+          considering the manipulator to be touching something
+        @param torque: the max allowable torque before considering the
           manipulator to be touching something
-        @param torque the max allowable torque before considering the manipulator to be touching
-          something
-        @param planner The planner to use to generate the trajectory, if None robot.planner is used
-        @param name The name of this action
+        @param planner: planner to use to generate the trajectory
+          if None, defaults to robot.planner
+        @param name: name of the action
         """
         super(MoveUntilTouchAction, self).__init__(name=name)
 
@@ -154,30 +189,45 @@ class MoveUntilTouchAction(Action):
         if torque is not None:
             self.torque = np.array(torque, dtype='float')
         else:
-            self.torque = np.array([127.] * 3)
+            self.torque = self.TORQUE_MAGNITUDE
 
     def get_manipulator(self, env):
+        """
+        Look up and return the manipulator in the environment.
+
+        @param env: OpenRAVE environment
+        """
         return from_key(env, self._manipulator)
 
     def get_bodies(self, env, bodies):
+        """
+        Look up and return the bodies in the environment.
+
+        @param env: OpenRAVE environment
+        @param bodies: list of body keys
+        @return Kinbodies
+        """
         return [from_key(env, key) for key in bodies]
 
     def plan(self, env):
         """
-        Plan a trajectory that moves in the specified direction for
-        the specified distance unless an object is touched
-        @param env The OpenRAVE environment
+        Plan a trajectory that moves in the specified direction for the
+        specified distance unless an object is touched.
+
+        @param env: OpenRAVE environment
+        @return a MoveUntilTouchSolution
         """
         target_bodies = self.get_bodies(env, self._target_bodies)
         manipulator = self.get_manipulator(env)
         robot = manipulator.GetRobot()
-        env = robot.GetEnv()
+        env = robot.GetEnv()  # TODO: why is this necessary?
 
         start_point = manipulator.GetEndEffectorTransform()[0:3, 0]
         ssavers = [
             robot.CreateRobotStateSaver(
-                Robot.SaveParameters.ActiveDOF | Robot.SaveParameters.
-                ActiveManipulator | Robot.SaveParameters.LinkTransformation)
+                Robot.SaveParameters.ActiveDOF
+                | Robot.SaveParameters.ActiveManipulator
+                | Robot.SaveParameters.LinkTransformation)
         ]
         for body in target_bodies:
             # ensure we preserve any enable-disabling that wraps
@@ -186,9 +236,10 @@ class MoveUntilTouchAction(Action):
                 body.CreateKinBodyStateSaver(KinBody.SaveParameters.LinkEnable)
             ]
 
-        with nested(*ssavers),\
+        with \
+            nested(*ssavers), \
             RenderVector(
-                start_point, self.direction, self.max_distance, env),\
+                start_point, self.direction, self.max_distance, env), \
             AllDisabled(env, target_bodies):
 
             manipulator.SetActive()
@@ -203,8 +254,7 @@ class MoveUntilTouchAction(Action):
 
                 # Mark this action as deterministic based on the traj tags
                 path_tags = GetTrajectoryTags(path)
-                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT,
-                                              None)
+                deterministic = path_tags.get(Tags.DETERMINISTIC_ENDPOINT, None)
                 if deterministic is None:
                     LOGGER.warn(
                         "Trajectory does not have DETERMINISTIC_ENDPOINT flag set. "
