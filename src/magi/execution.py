@@ -1,3 +1,5 @@
+"""MAGI parallel execution."""
+
 from Queue import Queue
 from threading import current_thread, Thread, Lock
 import logging
@@ -11,29 +13,57 @@ LOGGER = logging.getLogger('execute_pipeline')
 
 
 class AtomicValue(object):
+    """Value that is automatically locked."""
+
     def __init__(self, value):
+        """
+        @param value: value to be locked
+        """
         self.lock = Lock()
         self.value = value
 
     def set_value(self, value):
+        """
+        Set the atomic value.
+
+        @param value: new value
+        """
         with self.lock:
             self.value = value
 
     def get_value(self):
+        """
+        Get the atomic value.
+
+        @return the current value
+        """
         with self.lock:
             return self.value
 
 
 class ExceptionWrapper(object):
+    """Exception wrapper class."""
+
     def __init__(self, exception):
+        """
+        @param exception: original exception to wrap
+        """
         self.exception = exception
 
 
 class TerminationRequest(Exception):
+    """Exception class for termination requests."""
+
     pass
 
 
 def flatten_solution(solution):
+    """
+    Flatten a SequenceSolution into a list of Solutions.
+
+    @param solution: SequenceSolution
+    @return a list of Solutions
+    """
     if isinstance(solution, SequenceSolution):
         return sum([flatten_solution(s) for s in solution.solutions], [])
     else:
@@ -41,6 +71,12 @@ def flatten_solution(solution):
 
 
 def flatten_executable_solution(executable_solution):
+    """
+    Flatten an ExecutableSequenceSolution into a list of ExecutableSolutions.
+
+    @param executable_solution: ExecutableSequenceSolution
+    @return a list of ExecutableSolutions
+    """
     if isinstance(executable_solution, SequenceExecutableSolution):
         return sum([
             flatten_executable_solution(s)
@@ -52,6 +88,20 @@ def flatten_executable_solution(executable_solution):
 
 def worker_thread(env, is_running, lock, input_queue, output_queue, work_fn,
                   split_fn):
+    """
+    Worker thread for parallel planning.
+
+    @param env: OpenRAVE environment
+    @param is_running: AtomicValue, whether work is happening
+    @param lock: boolean, whether to lock the environment before working with
+      this thread
+    @param input_queue: Queue containing input values to do work with
+    @param output_queue: Queue to put output values to
+    @param work_fn: function that takes environment, input queue value and
+      returns output queue value
+    @param split_fn: function that takes raw input queue values and returns
+      list of input queue values
+    """
     name = current_thread().name
     internal_queue = []
 
@@ -100,11 +150,24 @@ def worker_thread(env, is_running, lock, input_queue, output_queue, work_fn,
 
 
 class ExecutionEngine(object):
+    """Execution engine."""
+
     def __init__(self, simulated, monitor=None):
+        """
+        @param simulated: flag to run in simulation
+        @param monitor: ActionMonitor visualizer
+        """
         self.simulated = simulated
         self.monitor = monitor
 
     def run(self, env, plan_callback):
+        """
+        Plan, postprocess, and execute.
+
+        @param env: OpenRAVE environment
+        @param plan_callback: function that takes environment and Solution
+        @return result of plan_callback
+        """
         with Clone(env, lock=False) as planning_env, \
              Clone(env, lock=False) as postprocessing_env:
             return self._run_internal(
@@ -115,6 +178,15 @@ class ExecutionEngine(object):
 
     def _run_internal(self, planning_env, postprocessing_env, execution_env,
                       plan_callback):
+        """
+        Helper function for planning, postprocessing, and executing.
+
+        @param planning_env: planning OpenRAVE environment
+        @param postprocessing_env: postprocessing OpenRAVE environment
+        @param execution_env: execution OpenRAVE environment
+        @param plan_callback: function that takes environment and Solution
+        @return result of plan_callback
+        """
         is_postprocessing_running = AtomicValue(True)
         is_execution_running = AtomicValue(True)
         solution_queue = Queue()
@@ -159,6 +231,12 @@ class ExecutionEngine(object):
             execution_thread.join()
 
     def _postprocess_callback(self, env, solution):
+        """
+        Postprocessing worker function.
+
+        @param env: postprocessing OpenRAVE environment
+        @param solution: Solution to postprocess
+        """
         if self.monitor is not None:
             self.monitor.set_post_processing_action(solution.action)
 
@@ -167,6 +245,12 @@ class ExecutionEngine(object):
         return executable_solution
 
     def _execute_callback(self, env, executable_solution):
+        """
+        Execution worker function.
+
+        @param env: execution OpenRAVE environment
+        @param executable_solution: ExecutableSolution to execute
+        """
         if self.monitor is not None:
             self.monitor.set_executing_action(
                 executable_solution.solution.action)
@@ -175,16 +259,39 @@ class ExecutionEngine(object):
 
 
 def execute_serial(env, solution, simulate):
+    """
+    Execute solution in serial.
+
+    @param env: OpenRAVE environment
+    @param solution: Solution to execute
+    @param simulate: flag to run in simulation
+    """
     solution.postprocess(env).execute(env, simulate)
 
 
 def execute_interleaved(env, full_solution, simulate):
+    """
+    Execute interleaved solution.
+
+    @param env: OpenRAVE environment
+    @param full_solution: Solution/SequenceSolution to execute
+    @param simulate: flag to run in simulation
+    """
     for solution in flatten_solution(full_solution):
         solution.postprocess(env).execute(env, simulate)
 
 
 def execute_pipeline(env, solution, simulate, monitor=None):
+    """
+    Execute solution using the parallel ExecutionEngine pipeline.
+
+    @param env: OpenRAVE environment
+    @param solution: Solution to execute
+    @param simulate: flag to run in simulation
+    @param monitor: ActionMonitor visualizer
+    """
     def plan_callback(_, solution_queue):
+        """Simple callback that just puts the solution in the queue."""
         solution_queue.put(solution)
 
     engine = ExecutionEngine(simulated=simulate, monitor=monitor)
@@ -197,14 +304,26 @@ def plan_execute_pipeline(env,
                           simulate,
                           monitor=None,
                           timelimit=None):
+    """
+    Plan and execute solution using the parallel ExecutionEngine pipeline.
+
+    @param env: OpenRAVE environment
+    @param planner: Planner to plan with
+    @param action: Action to plan
+    @param simulate: flag to run in simulation
+    @param monitor: ActionMonitor visualizer
+    @param timelimit: time limit (seconds) for planners to plan
+    """
     if timelimit is not None:
 
         def plan_callback(planning_env, solution_queue):
+            """Callback that uses the timed planner."""
             return planner.plan_timed(
                 planning_env, action, timelimit, output_queue=solution_queue)
     else:
 
         def plan_callback(planning_env, solution_queue):
+            """Callback that uses the untimed planner."""
             return planner.plan_action(
                 planning_env, action, output_queue=solution_queue)
 
