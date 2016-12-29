@@ -224,7 +224,6 @@ class MoveUntilTouchAction(Action):
         target_bodies = self.get_bodies(env, self._target_bodies)
         manipulator = self.get_manipulator(env)
         robot = manipulator.GetRobot()
-        env = robot.GetEnv()  # QUESTION: why is this necessary?
 
         start_point = manipulator.GetEndEffectorTransform()[0:3, 0]
         ssavers = [
