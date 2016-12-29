@@ -356,11 +356,11 @@ class GrabObjectSolution(MoveHandSolution):
 
     def save(self, env):
         """
-        Save robot pose, object pose, and grabbed bodies.
+        Save robot pose and set of grabbed bodies.
 
         @param env: OpenRAVE environment
-        @return the result of MoveHandSolution.save and a RobotStateSaver that
-          saves the set of GrabbedBodies
+        @return context manager; the result of MoveHandSolution.save and a
+          RobotStateSaver that saves the set of GrabbedBodies
         """
         robot = self.action.get_hand(env).GetParent()
 
@@ -511,14 +511,14 @@ class ReleaseObjectsSolution(MoveHandSolution):
 
     def save(self, env):
         """
-        Save robot pose, object pose, and grabbed bodies.
+        Save robot pose and set of grabbed bodies.
 
         @param env: OpenRAVE environment
-        @return context manager
+        @return context manager; the result of MoveHandSolution.save and a
+          RobotStateSaver that saves the set of GrabbedBodies
         """
         robot = self.action.get_hand(env).GetParent()
 
-        # QUESTION: how does this save object pose?
         return nested(
             super(ReleaseObjectsSolution, self).save(env),
             robot.CreateRobotStateSaver(Robot.SaveParameters.GrabbedBodies))
@@ -544,8 +544,8 @@ class ReleaseObjectsSolution(MoveHandSolution):
         """
         Open the hand and release the object.
 
-        If drop was set on the action, also move the object down until it is in
-        collision with another object, to simulate a drop.
+        This *does not* simulate dropping the object until it collides with
+        another object.
 
         @param env: OpenRAVE environment
         @param simulate: flag to run in simulation
@@ -559,7 +559,6 @@ class ReleaseObjectsSolution(MoveHandSolution):
         # Release the objects
         for obj_key in self._objs:
             obj = self.get_obj(env, obj_key)
-            # FIXME: does this simulate a drop?
             robot.Release(obj)
 
 
