@@ -27,50 +27,50 @@ import magi.monitor
 LOGGER = logging.getLogger(__name__)
 
 
-def grasp_glass_action_graph(manipulator_, glass_, table_):
+def grasp_glass_action_graph(manipulator, glass, table):
     """
     Generate grasp glass action graph.
 
-    @param manipulator_: manipulator to grasp the glass with
-    @param glass_: glass to grasp
-    @param table_: table on which the grasp is resting
+    @param manipulator: manipulator to grasp the glass with
+    @param glass: glass to grasp
+    @param table: table on which the grasp is resting
     @return Action graph
     """
-    hand_dof, hand_values = manipulator_.hand.configurations.get_configuration('glass_grasp')
-    close_dof, close_values = manipulator_.hand.configurations.get_configuration('closed')
+    hand_dof, hand_values = manipulator.hand.configurations.get_configuration('glass_grasp')
+    close_dof, close_values = manipulator.hand.configurations.get_configuration('closed')
 
     actions = [
         MoveHandAction(
             name='OpenHandAction',
-            hand=manipulator_.hand,
+            hand=manipulator.hand,
             dof_values=hand_values,
             dof_indices=hand_dof
         ),
         PlanToTSRAction(
             name='PlanToPoseNearGlassAction',
-            robot=manipulator_.GetRobot(),
-            obj=glass_,
+            robot=manipulator.GetRobot(),
+            obj=glass,
             tsr_name='push_grasp',
-            active_indices=manipulator_.GetArmIndices(),
-            active_manipulator=manipulator_
+            active_indices=manipulator.GetArmIndices(),
+            active_manipulator=manipulator
         ),
         DisableAction(
-            objects=[table_],
+            objects=[table],
             padding_only=True,
             wrapped_action=PushObjectAction(
                 name='PushGlassAction',
-                manipulator=manipulator_,
-                obj=glass_,
+                manipulator=manipulator,
+                obj=glass,
                 push_distance=0.2
             )
         ),
         DisableAction(
-            objects=[table_],
+            objects=[table],
             padding_only=True,
             wrapped_action=GrabObjectAction(
                 name='GraspGlassAction',
-                hand=manipulator_.hand,
-                obj=glass_,
+                hand=manipulator.hand,
+                obj=glass,
                 dof_values=close_values,
                 dof_indices=close_dof
             )
@@ -91,28 +91,28 @@ GLASS_IN_TABLE = numpy.array([[1., 0., 0., -0.359],
                               [0., -1., 0., -0.072],
                               [0., 0., 0., 1.]])
 
-def detect_objects(robot_):
+def detect_objects(robot):
     """
     Return table and glass objects relative to the robot.
     Add table and glass objects to the world.
 
-    @param robot_: OpenRAVE robot
+    @param robot: OpenRAVE robot
     @return table and glass KinBodies
     """
-    env_ = robot_.GetEnv()
-    with env_:
-        robot_in_world = robot_.GetTransform()
+    env = robot.GetEnv()
+    with env:
+        robot_in_world = robot.GetTransform()
 
     table_in_world = numpy.dot(robot_in_world, TABLE_IN_ROBOT)
-    table_ = add_object(env_, 'table', 'furniture/table.kinbody.xml',
-                        table_in_world)
+    table = add_object(env, 'table', 'furniture/table.kinbody.xml',
+                       table_in_world)
 
-    glass_ = add_object(env_, 'glass', 'objects/plastic_glass.kinbody.xml',
-                        numpy.dot(table_in_world, GLASS_IN_TABLE))
-    return table_, glass_
+    glass = add_object(env, 'glass', 'objects/plastic_glass.kinbody.xml',
+                       numpy.dot(table_in_world, GLASS_IN_TABLE))
+    return table, glass
 
-
-if __name__ == "__main__":
+def main():
+    """Execute demo for grasping glass."""
     parser = argparse.ArgumentParser()
     parser.add_argument('--viewer', '-v', type=str, default='interactivemarker',
                         help='The viewer to attach (none for no viewer)')
@@ -183,3 +183,6 @@ if __name__ == "__main__":
 
     if monitor:
         monitor.stop()
+
+if __name__ == "__main__":
+    main()
