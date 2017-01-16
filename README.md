@@ -19,7 +19,7 @@ In summary, you should be able to execute these commands to download and build t
     $ catkin build
     $ . devel/setup.bash
 
-To run an example script, try
+To run an example script, start `roscore` in a separate terminal and try
 
     $ rosrun magi grasp_glass_demo.py --viewer rviz
 

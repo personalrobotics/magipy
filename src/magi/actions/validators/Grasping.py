@@ -1,29 +1,37 @@
 #!/usr/bin/env python
-from ..validate import Validator
-from ..base import to_key, from_key, ValidationError
 
+"""Define GraspValidator and GraspMeanValidator."""
+
+import csv
 import logging
-logger = logging.getLogger(__name__)
+
+from scipy.linalg import norm
+from sklearn import svm
+import numpy as np
+
+from magi.actions.base import to_key, from_key, ValidationError
+from magi.actions.validate import Validator
+
+LOGGER = logging.getLogger(__name__)
+
 
 class GraspValidator(Validator):
+    """Validate a grasp by using binary classification with an SVM."""
 
     def __init__(self, infile, robot, dof_indices, name='GraspValidator'):
         """
-        This class validates a grasp by using performing
-        simply binary classification using an SVM
-        @param infile A csvfile containing grasp data used to build the classifier
-        @param robot The OpenRAVE robot to validate
-        @param dof_indices The dof indices to validate
+        @param infile: csvfile containing grasp data used to build the
+          classifier
+        @param robot: OpenRAVE robot to validate
+        @param dof_indices: dof indices to validate
+        @param name: name of the validator
         """
         super(GraspValidator, self).__init__(name=name)
 
-        import csv, numpy
-        from sklearn import svm
-
         data = []
         # Read in the csv file
-        with open(infile, 'r') as f:
-            reader = csv.reader(f, delimiter=' ')
+        with open(infile, 'r') as in_f:
+            reader = csv.reader(in_f, delimiter=' ')
             for row in reader:
                 data.append(row)
 
@@ -40,11 +48,10 @@ class GraspValidator(Validator):
             # Convert everything else to float
             row[:-1] = [float(v) for v in row[:-1]]
 
-
         # Now build the classifier
-        self.data = numpy.array(data)
-        self.X = self.data[:,:-2]
-        self.y = self.data[:,-1]
+        self.data = np.array(data)
+        self.X = self.data[:, :-2]
+        self.y = self.data[:, -1]
 
         self.clf = svm.SVC()
         self.clf.fit(self.X, self.y)
@@ -54,55 +61,69 @@ class GraspValidator(Validator):
 
     def get_robot(self, env):
         """
-        Lookup and return the appropriate robot from the environment
-        @param env The OpenRAVE environment
+        Look up and return the robot in the environment.
+
+        @param env: OpenRAVE environment
+        @return an OpenRAVE robot
         """
         return from_key(env, self._robot)
-        
+
     def validate(self, env, detector=None):
         """
-        @throws An ValidationError if the grasp is not valid
+        Validate a grasp by predicting with the SVM.
+
+        @param env: OpenRAVE environment
+        @param detector: object detector (implements DetectObjects, Update)
+        @throws a ValidationError if the grasp is not valid
         """
         robot = self.get_robot(env)
         with env:
             dof_values = robot.GetDOFValues(self.dof_indices)
-        v = self.clf.predict(dof_values.reshape(1,-1))
+        pred = self.clf.predict(dof_values.reshape(1, -1))
 
         # Raise an error if the validation doesn't check out
-        if v[0] == 0:
-            raise ValidationError(message='Grasp failed validation', validator=self)
+        if pred[0] == 0:
+            raise ValidationError(
+                message='Grasp failed validation', validator=self)
 
 
-class GraspMeanValidator(Validator): 
-    
+class GraspMeanValidator(Validator):
+    """
+    Validate a grasp by comparing current grasp dof values with (simulated)
+    success dof values.
+    """
 
-    def __init__(self, object_type, name='GraspMeanValidator'): 
-        """ 
-        Validates grasp by comparing current grasp dof values 
-        with (simulated) success dof values
+    def __init__(self, object_type, name='GraspMeanValidator'):
+        """
+        @param object_type: name of object (i.e. 'glass', 'bowl', 'plate')
+        @param name: name of the validator
         """
         super(GraspMeanValidator, self).__init__(name=name)
-        import numpy as np
 
-        if object_type == 'glass': 
+        if object_type == 'glass':
             self.mean = np.array([1.22, 1.16, 1.2])
         elif object_type == 'bowl':
             self.mean = np.array([1.58, 1.56, 0.8])
         elif object_type == 'plate':
             self.mean = np.array([1.46, 1.46, 1.34])
         else:
-            raise ValueError('object type not one of (glass, bowl, plate)') 
+            raise ValueError('object type not one of (glass, bowl, plate)')
 
-        self.max = 1.0 # may need to be calibrated (or different value per object, but this seems to work for now. 
+        # May need to be calibrated (or different value per object),
+        # but this seems to work for now.
+        self.max = 1.0
 
     def validate(self, env, detector=None):
         """
-        @throws An ValidationError if the grasp is not valid
-        """
-        import numpy as np
-        from scipy.linalg import norm 
+        Validate a grasp by checking the difference from the simulated dof
+        values.
 
+        @param env: OpenRAVE environment
+        @throws a ValidationError if the grasp is not valid
+        """
         difference = norm(self.mean - np.array(dof_values))
-        logger.info('GraspMeanValidator - validating grasp: "%s"', str(difference <= self.max))
+        LOGGER.info('GraspMeanValidator - validating grasp: "%s"',
+                    str(difference <= self.max))
         if difference > self.max:
-            raise ValidationError(message='Grasp failed validation', validator=self)
+            raise ValidationError(
+                message='Grasp failed validation', validator=self)
