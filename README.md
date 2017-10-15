@@ -1,4 +1,4 @@
-# magi
+# magi [![Build Status](https://travis-ci.com/personalrobotics/magi.svg?token=1MmAniN9fkMcwpRUTdFq&branch=master)](https://travis-ci.com/personalrobotics/magi)
 
 **MAGI** (Multistep Action Graph Instantiator) lets you construct a multistep action graph and find a sequence of executable trajectories using various backtracking strategies and `PrPy` planners.
 
