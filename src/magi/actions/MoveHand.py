@@ -12,7 +12,6 @@ from openravepy import (CollisionAction, CollisionOptions, CollisionOptionsState
                         CollisionReport, RaveCreateTrajectory, Robot)
 
 from magi.actions.base import Action, ExecutableSolution, Solution, from_key, to_key
-from magi.actions.validators.PoseValidator import ObjectPoseValidator
 
 
 class MoveHandSolution(Solution, ExecutableSolution):
@@ -472,15 +471,16 @@ class GrabObjectAction(MoveHandAction):
         """
         # Add PoseValidator precondition
         obj = from_key(env, self._obj)
-        obj_pose_validator = ObjectPoseValidator(obj.GetName(),
-                                                 obj.GetTransform())
+        # TODO: create obj_pose_validator to use as a precondition in
+        # GrabObjectSolution
+        #obj_pose_validator = ObjectPoseValidator(obj.GetName(),
+        #                                         obj.GetTransform())
 
         return GrabObjectSolution(
             action=self,
             obj=from_key(env, self._obj),
             dof_values=self.dof_values,
-            dof_indices=self.dof_indices,
-            precondition=obj_pose_validator)
+            dof_indices=self.dof_indices)
 
 
 class ReleaseObjectsSolution(MoveHandSolution):
